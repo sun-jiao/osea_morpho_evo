@@ -1,0 +1,8 @@
+.idea/*
+*.pt
+*.pth
+*.json
+*.csv
+
+src/morphology_tree.tre
+src/tree_output.svg
