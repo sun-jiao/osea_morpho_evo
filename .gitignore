@@ -6,3 +6,4 @@
 
 src/morphology_tree.tre
 src/tree_output.svg
+*.gz
