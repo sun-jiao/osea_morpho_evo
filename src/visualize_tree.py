@@ -1,6 +1,6 @@
 from ete3 import Tree, TreeStyle, TextFace
 
-tree = Tree("morphology_tree.tre")
+tree = Tree("morphology_cluster.tre")
 n_leaves = len(tree.get_leaves())
 
 # height
