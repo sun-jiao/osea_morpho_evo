@@ -7,3 +7,4 @@
 *.tre
 *.svg
 *.gz
+!src/excluded_species.csv
