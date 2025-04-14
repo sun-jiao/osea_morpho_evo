@@ -50,7 +50,7 @@ group_variances = []
 for group, vectors in groups_and_vectors:
     vectors = torch.stack(vectors, dim=0)
     group_variance = vectors.var(dim=0, unbiased=False).mean()
-    group_variances.append((group, group_variance.item() * 100000, vectors.size(0)))
+    group_variances.append((group, group_variance.item(), vectors.size(0)))
 
 with open(f'disparity_{LEVEL}.csv', 'w') as file:
     writer = csv.writer(file)
