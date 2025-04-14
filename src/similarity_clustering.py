@@ -35,7 +35,10 @@ def linkage_to_newick(matrix, labels):
         else:
             left = build_newick(node.left, node.dist, leaf_names)
             right = build_newick(node.right, node.dist, leaf_names)
-            return f"({left},{right}):{parent_dist - node.dist:.4f}"
+            # subtree sorting
+            children = sorted([left, right])
+            return f"({children[0]},{children[1]}):{parent_dist - node.dist:.4f}"
+
     return f"{build_newick(tree, tree.dist, labels)};"
 
 newick_str = linkage_to_newick(linkage_matrix, labels)
