@@ -10,12 +10,13 @@ LEVEL = "family"
 
 def load_classification_data(csv_file, level):
     # The data was provided by authors of the training dataset and I added the orders and families based on IOC 15.1
-    # So the final file is in this order: Vascular name (zh), vascular name (en), scientific name, order, family
-    # 非洲鸵鸟,Common Ostrich,Struthio camelus,STRUTHIONIFORMES,Struthionidae
+    # So the final file is in this order: Vascular name (zh), vascular name (en), scientific name,
+    # corresponding scientific name in IOC 15.1, order, family, index
+    # 非洲鸵鸟,Common Ostrich,Struthio camelus,Struthio camelus,STRUTHIONIFORMES,Struthionidae,0
     if level == 'order':
-        index = 3
-    elif level == 'family':
         index = 4
+    elif level == 'family':
+        index = 5
     else:
         raise ValueError('level must be either "order" or "family"')
 

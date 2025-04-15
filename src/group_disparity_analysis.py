@@ -34,9 +34,9 @@ with open("excluded_species.csv", 'r') as f:
 excluded = [bird[0] for bird in excluded]
 
 if LEVEL == 'order':
-    level_index = 3
-elif LEVEL == 'family':
     level_index = 4
+elif LEVEL == 'family':
+    level_index = 5
 else:
     raise ValueError('level must be either "order" or "family"')
 
