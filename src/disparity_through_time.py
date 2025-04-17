@@ -161,7 +161,7 @@ def compute_variance(vectors):
     return np.mean(sq_dists)
 
 
-def compute_dtt_time_slices(tree, trait_map, interval=1.0):
+def compute_dtt_time_slices(tree, trait_map, num_slices=None, interval=None):
     """
     Calculate the variance of vectors across different time slices of the tree, all active branches included.
     Interpolation for itermediate nodes, real data for leaf nodes.
@@ -185,10 +185,19 @@ def compute_dtt_time_slices(tree, trait_map, interval=1.0):
     _reconstruct_ancestral_states(tree.root)
 
     max_time = max(tree.depths().values())
-    slice_times = np.arange(max_time, -interval, -interval).tolist()
-    if slice_times[-1] > 0:
-        slice_times.append(0.0)
-    slice_times = sorted(slice_times)
+
+    slice_times = None
+
+    if (interval is None) == (num_slices is None):
+        raise ValueError("Exactly one of 'interval' or 'num_slices' must be set.")
+
+    if interval:
+        slice_times = np.arange(max_time, -interval, -interval).tolist()
+        if slice_times[-1] > 0:
+            slice_times.append(0.0)
+        slice_times = sorted(slice_times)
+    else:
+        slice_times = np.linspace(0, max_time, num_slices)
 
     results = []
 
@@ -297,7 +306,7 @@ def main(tree_file, load_file=None):
                 reconstruct_ancestral_states(tree_item, trait_mapping)
                 assign_node_ages(tree_item)
 
-                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, trait_mapping)
+                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, trait_mapping, interval=1.0)
                 # all_dtt_results[i] = dtt_results
 
                 times, variances = zip(*dtt_results)
