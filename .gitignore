@@ -10,3 +10,4 @@
 !src/excluded_species.csv
 src/CombinedTrees
 *.png
+*.zip

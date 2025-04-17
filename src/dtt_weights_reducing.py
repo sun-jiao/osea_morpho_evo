@@ -24,13 +24,21 @@ model.eval()
 
 weights = model.fc.weight.to(device)[:num_species].detach().cpu().numpy()
 
-pca = PCA(n_components=50)
-pca_result = pca.fit_transform(weights)
+pca_result = None
 
-reducer = umap.UMAP(n_components=5, random_state=42)
+for n in range(1, weights.shape[1] - 1):
+    pca = PCA(n_components=n)
+    pca.fit(weights)
+    total_explained = sum(pca.explained_variance_ratio_)
+    print(f"{n}-dimensionality explained: {total_explained}")
+    if 0.80 <= total_explained:
+        best_n_components = n
+        pca_result = pca.fit_transform(weights)
+        break
 
-reduced_weights = reducer.fit_transform(pca_result)
+if pca_result is None:
+    pca_result = weights
 
-with open(f'reduced_weights.csv', 'w') as file:
+with open(f'pca_weights.csv', 'w') as file:
     writer = csv.writer(file)
-    writer.writerows(reduced_weights)
+    writer.writerows(pca_result)

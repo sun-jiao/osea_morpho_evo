@@ -2,7 +2,7 @@ from ete3 import Tree
 
 trees = []
 
-with open("CombinedTrees/AllBirdsHackett1.tre") as f:
+with open("CombinedTrees/HackettStage1Full_1.tre") as f:
     for line in f:
         line = line.strip()
         if line:  # ignore empty line
@@ -15,3 +15,6 @@ with open("CombinedTrees/AllBirdsHackett1.tre") as f:
                 break
 
 print([leaf.name for leaf in trees[0].get_leaves()])
+
+with open("birdtree_tree_6670_0.tre", "w") as f: # for test purpose.
+    f.write(t.write(format=0))
