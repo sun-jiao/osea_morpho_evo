@@ -269,8 +269,6 @@ def main(tree_file, load_file=None):
     name_match = read_name_match(name_match_file)
     pca_weights = read_pca_weights(pca_weights_file)
 
-    # all_dtt_results = {}
-
     trait_mapping = None
 
     start = time.time()
@@ -307,15 +305,8 @@ def main(tree_file, load_file=None):
                 assign_node_ages(tree_item)
 
                 tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, trait_mapping, interval=1.0)
-                # all_dtt_results[i] = dtt_results
 
                 times, variances = zip(*dtt_results)
-
-                # reverse time
-                # times = [t - times[-1] for t in times]
-
-                # 可视化：绘制时间（横轴）和形态方差（纵轴）的变化曲线
-                # plt.plot(times, variances, label=f"Tree {i + 1}")
 
                 print(f"[{base_filename}] It tooks {(time.time() - start):.2f} seconds to process {i} trees!")
 
@@ -323,19 +314,6 @@ def main(tree_file, load_file=None):
 
                 del line, tree_item, tree_total_time, dtt_results, times, variances
                 gc.collect()
-
-        # plt.xlabel("Time (Mya)")
-        # plt.ylabel("Disparity (variances)")
-        # plt.title("Disparity Through Time Analysis")
-        # # plt.legend()
-        # plt.show()
-
-
-        # export the results, for test purpose only.
-        # for tree_idx, results in all_dtt_results.items():
-        #     print(f"The number {tree_idx + 1} tree:")
-        #     for t, variance in results:
-        #         print(f"Time: {t:.4f} (Mya), morphological variance: {variance:.4f}")
 
 if __name__ == "__main__":
     processes = []
