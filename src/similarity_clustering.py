@@ -5,28 +5,43 @@ from scipy.cluster import hierarchy
 from scipy.cluster.hierarchy import to_tree
 from scipy.spatial.distance import squareform
 
-bird_info = []
-with open("bird_info.csv", 'r') as f:
-    reader = csv.reader(f)
-    for row in reader:
-        bird_info.append(row)
+type = 'dimension' # 'species' 'dimension'
 
-num_species = len(bird_info)
-labels = [f"{i}_{bird_info[i][2]}_{bird_info[i][0]}".replace(' ', '_') for i in range(num_species)]
+filename = f"class_similarity-{type}.csv"
+
 similarity_matrix = np.loadtxt(
-    "class_similarity.csv",
+    filename,
     delimiter=',',
     skiprows=1,          # skip the frist row
-    usecols=range(1, len(open("class_similarity.csv").readline().split(','))  # skip the first column
-                  ))
-reduced_matrix = similarity_matrix[:num_species, :num_species]
-distance_matrix = 1 - reduced_matrix
+    usecols=range(1, len(open(filename).readline().split(','))))  # skip the first column
+
+if type == 'species':
+    bird_info = []
+    with open("bird_info.csv", 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            bird_info.append(row)
+
+    num_species = len(bird_info)
+
+    labels = [f"{i}_{bird_info[i][2]}_{bird_info[i][0]}".replace(' ', '_') for i in range(num_species)]
+elif type == 'dimension':
+    # calculate the correlation of dimensions
+    labels = [str(i) for i in list(range(512))]
+    # 1 - |corr|
+    similarity_matrix = np.abs(similarity_matrix)
+else:
+    raise ValueError
+
+# reduced_matrix = similarity_matrix[:num_species, :num_species]
+distance_matrix = 1 - similarity_matrix
+distance_matrix = (distance_matrix + distance_matrix.T) / 2  # avoid float error
 condensed_matrix = squareform(distance_matrix)
 
 # hierarchy clustering
 linkage_matrix = hierarchy.linkage(condensed_matrix, method='average')
 
-# convert to newick file
+# convert to a newick file
 def linkage_to_newick(matrix, labels):
     tree = to_tree(matrix, rd=False)
     def build_newick(node, parent_dist, leaf_names):
@@ -43,6 +58,6 @@ def linkage_to_newick(matrix, labels):
 
 newick_str = linkage_to_newick(linkage_matrix, labels)
 
-# save file
-with open("morphology_cluster.tre", "w") as f:
+# save a file
+with open(f"similarity_clustering-{type}.tre", "w") as f:
     f.write(newick_str)
