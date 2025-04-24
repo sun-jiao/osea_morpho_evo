@@ -1,3 +1,4 @@
+import bisect
 import csv
 import io
 import os
@@ -13,14 +14,7 @@ from Bio import Phylo
 # ---------------------------
 # Data reading and processing
 # ---------------------------
-def read_name_match(file_path):
-    """the relationship between labels in tree and indexes of vectors"""
-    df = pd.read_csv(file_path, header=None)
-    return df
-
-
-def read_pca_weights(file_path):
-    """read PCA reduced weights vectors"""
+def read_csv(file_path):
     df = pd.read_csv(file_path, header=None)
     return df
 
@@ -30,13 +24,16 @@ def read_phylogenetic_trees(tree_string):
     tree = Phylo.read(handle, "newick")
     return tree
 
+
 def get_progress(file_path):
     df = pd.read_csv(file_path, header=None)
     return df.shape[0]
 
 
 def remove_missing_data_nodes(tree, name_match_df):
-    """Remove nodes that have no corresponding vector from the tree"""
+    """Remove nodes that have no corresponding vector from the tree
+    No excluded species included in the tree, so no need to remove them.
+    """
     missing_species = name_match_df[name_match_df.iloc[:, 2] == -1].iloc[:, 0].tolist()
     terminals_to_remove = [terminal for terminal in tree.get_terminals() if terminal.name in missing_species]
     for terminal in terminals_to_remove:
@@ -69,7 +66,7 @@ def collapse_single_child_nodes(tree):
 
 
 def find_parent(tree, target):
-    """In biopython, a node have references to its child nodes, but not parent nodes.
+    """In biopython, a node has references to its child nodes, but not parent nodes.
     Thus, we have to traverse the tree"""
     for clade in tree.find_clades():
         if target in clade.clades:
@@ -88,7 +85,7 @@ def create_trait_mapping(tree, name_match_df, pca_weights_df):
             if index < len(pca_weights_df):
                 trait_map[label] = pca_weights_df.iloc[index].values
             else:
-                print(f"Warning: Index {index} is out of the range of vactors for label {label}.")
+                print(f"Warning: Index {index} is out of the range of vectors for label {label}.")
     return trait_map
 
 
@@ -97,19 +94,27 @@ def create_trait_mapping(tree, name_match_df, pca_weights_df):
 # ---------------------------
 def reconstruct_ancestral_states(tree, trait_map):
     """
-    Ancestor State Reconstruction (Improved Version):
+    Ancestor State Reconstruction, using Phylogenetic Independent Contrast methods:
     - Leaf nodes: Directly assign from trait_map.
     - Internal nodes: Use weighted average (based on the reciprocal of branch length).
-    - If the branch length is missing, it is assumed to be 1.
-    All states are stored in node.state.
+    - If branch_length is missing or zero, it’s replaced with a tiny ε to avoid division by zero.
+    All states are stored in `node.state`.
     """
 
     # tip-value assigning
     for tip in tree.get_terminals():
         if tip.name in trait_map:
             tip.state = trait_map[tip.name]
+            tip.equiv_length = 0.0
         else:
             tip.state = None  # missing value
+            tip.equiv_length = 0.0
+
+    # make the default value smaller than the min value.
+    all_bl = [node.branch_length for node in tree.find_clades()
+              if node.branch_length and node.branch_length > 0]
+    min_bl = min(all_bl) if all_bl else 1.0
+    eps = min_bl * 1e-4
 
     # post-order traverse and calculate the weighted average
     for node in tree.get_nonterminals(order="postorder"):
@@ -117,14 +122,15 @@ def reconstruct_ancestral_states(tree, trait_map):
         weights = []
         for child in node.clades:
             if hasattr(child, "state") and child.state is not None:
-                bl = child.branch_length if child.branch_length and child.branch_length > 0 else 1.0
-                weight = 1.0 / bl
+                bl = child.branch_length if child.branch_length and child.branch_length > 0 else eps
+                equiv_bl = child.equiv_length if child.equiv_length else 0
+                weight = 1.0 / (bl + equiv_bl)
                 weights.append(weight)
                 child_states.append(child.state)
         if child_states:
             weights = np.array(weights)
-            weights = weights / weights.sum()
             node.state = np.average(child_states, axis=0, weights=weights)
+            node.equiv_length = 1 / weights.sum()
         else:
             node.state = None
 
@@ -161,28 +167,11 @@ def compute_variance(vectors):
     return np.mean(sq_dists)
 
 
-def compute_dtt_time_slices(tree, trait_map, num_slices=None, interval=None):
+def compute_dtt_time_slices(tree, num_slices=None, interval=None):
     """
     Calculate the variance of vectors across different time slices of the tree, all active branches included.
-    Interpolation for itermediate nodes, real data for leaf nodes.
+    Interpolation for intermediate nodes, real data for leaf nodes.
     """
-
-    def _reconstruct_ancestral_states(_clade):
-        if _clade.is_terminal():
-            if _clade.name in trait_map:
-                _clade.state = trait_map[_clade.name]
-            else:
-                _clade.state = None
-        else:
-            for child in _clade.clades:
-                _reconstruct_ancestral_states(child)
-            states = [c.state for c in _clade.clades if hasattr(c, 'state') and c.state is not None]
-            if states:
-                _clade.state = np.mean(states, axis=0)
-            else:
-                _clade.state = None
-
-    _reconstruct_ancestral_states(tree.root)
 
     max_time = max(tree.depths().values())
 
@@ -197,61 +186,44 @@ def compute_dtt_time_slices(tree, trait_map, num_slices=None, interval=None):
             slice_times.append(0.0)
         slice_times = sorted(slice_times)
     else:
-        slice_times = np.linspace(0, max_time, num_slices)
+        slice_times = np.linspace(0, max_time, num_slices).tolist()
+
+    # active clades per slice, use indexes as keys to avoid float errors
+    vectors_per_slice = {i: [] for i in range(len(slice_times))}
+
+    # avoid floating-point error, in one of my cases, t of the last slice
+    # was 112.4116612, while end_time was 112.41149999.
+    # so we just use all extant species (terminal nodes).
+    for leaf in tree.get_terminals():
+        # if leaf.name in trait_map: # already aligned.
+        vectors_per_slice[len(slice_times) - 1].append(leaf.state)
+
+    # traverse every clade
+    def collect_active_clades(p_node):
+        for c_node in p_node.clades:
+            start_time = p_node.age
+            end_time = c_node.age
+
+            i_start = bisect.bisect_left(slice_times, start_time)
+            i_end = bisect.bisect_right(slice_times, end_time, lo=i_start)
+
+            for i in range(i_start, i_end):
+                t = slice_times[i]
+                # get states of the given time
+                if hasattr(p_node, 'state') and hasattr(c_node, 'state'):
+                    p_state = p_node.state
+                    c_state = c_node.state
+                    if p_state is not None and c_state is not None:
+                        interp_state = interpolate_state(p_state, c_state, start_time, end_time, t)
+                        vectors_per_slice[i].append(interp_state)
+            collect_active_clades(c_node)
+
+    collect_active_clades(tree.root)
 
     results = []
-
-    # traverse every slice
-    for i, t in enumerate(slice_times):
-        active_clades = []
-
-        if i == len(slice_times) - 1:
-            # avoid floating-point error, in one of my case, t of the last slice
-            # was 112.4116612, while end_time was 112.41149999.
-            # so we just use all
-            for leaf in tree.get_terminals():
-                if leaf.name in trait_map:
-                    leaf.state_at_t = trait_map[leaf.name]
-                    active_clades.append(leaf)
-        else:
-            def collect_active_clades(_clade, current_time=0.0):
-                for child in _clade.clades:
-                    branch_length = child.branch_length or 0.0
-                    start_time = current_time
-                    end_time = current_time + branch_length
-
-                    if start_time <= t <= end_time:
-                        # get states of the given time
-                        if child.is_terminal():
-                            if child.name in trait_map:
-                                child.state_at_t = trait_map[child.name]
-                                active_clades.append(child)
-                        elif hasattr(_clade, 'state') and hasattr(child, 'state'):
-                            p_state = _clade.state
-                            c_state = child.state
-                            if p_state is not None and c_state is not None:
-                                interp_state = interpolate_state(p_state, c_state, start_time, end_time, t)
-                                child.state_at_t = interp_state
-                                active_clades.append(child)
-                    collect_active_clades(child, end_time)
-
-            collect_active_clades(tree.root)
-
-        # get all trait vectors of this time
-        vectors = []
-        for clade in active_clades:
-            if clade.is_terminal() and clade.name in trait_map:
-                vectors.append(trait_map[clade.name])
-            elif hasattr(clade, "state_at_t") and clade.state_at_t is not None:
-                vectors.append(clade.state_at_t)
-
-        if len(vectors) > 1:
-            vectors = np.array(vectors)
-            mean_vec = np.mean(vectors, axis=0)
-            variance = np.mean(np.sum((vectors - mean_vec) ** 2, axis=1))
-        else:
-            variance = 0.0
-
+    for i in range(len(slice_times)):
+        t = slice_times[i]
+        variance = compute_variance(vectors_per_slice[i])
         results.append((t, variance))
 
     return max_time, results
@@ -266,26 +238,26 @@ def main(tree_file, load_file=None):
     name_match_file = "birdtree_name_match.csv"
     pca_weights_file = "pca_weights.csv"
 
-    name_match = read_name_match(name_match_file)
-    pca_weights = read_pca_weights(pca_weights_file)
+    # the relationship between labels in the tree and indexes of vectors
+    name_match = read_csv(name_match_file)
+    # read PCA reduced weights vectors
+    pca_weights = read_csv(pca_weights_file)
 
     trait_mapping = None
 
     start = time.time()
 
-    out_file = f'output/disparity_through_time-{base_filename}-{start:.0f}.csv'
+    os.makedirs('output', exist_ok=True)
+    out_path = f'output/disparity_through_time-{base_filename}-{start:.0f}.csv'
     progress = get_progress(load_file) if load_file is not None else 0
-    i = 0
 
     with open(tree_file) as f:
-        with open(out_file, 'a') as out_file:
+        with open(out_path, 'a') as out_file:
             writer = csv.writer(out_file)
 
-            for line in f:
+            for i, line in enumerate(f):
                 if i < progress:
                     continue
-                else:
-                    i = i + 1
 
                 line = line.strip()
                 tree_item = read_phylogenetic_trees(line)
@@ -304,11 +276,11 @@ def main(tree_file, load_file=None):
                 reconstruct_ancestral_states(tree_item, trait_mapping)
                 assign_node_ages(tree_item)
 
-                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, trait_mapping, interval=1.0)
+                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, interval=1.0)
 
                 times, variances = zip(*dtt_results)
 
-                print(f"[{base_filename}] It tooks {(time.time() - start):.2f} seconds to process {i} trees!")
+                print(f"[{base_filename}] It took {(time.time() - start):.2f} seconds to process {i} trees!")
 
                 writer.writerow([tree_total_time, *variances])
 
