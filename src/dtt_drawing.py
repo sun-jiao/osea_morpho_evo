@@ -38,8 +38,8 @@ for filename in os.listdir(data_dir):
                     time = [0 - time_length, *time]
                 times.append(time)
 
-                rand_num = np.random.randint(1, 51)
-                if rand_num == 50:  # random drawing, otherwise lines will be hard to distinguish
+                rand_num = np.random.randint(0, 50)
+                if rand_num == 0:  # random drawing, otherwise lines will be hard to distinguish
                     plt.plot(time, nums, color='grey', linewidth=0.5, alpha=0.5)
 
 # get the range of data for interpolating sampling
