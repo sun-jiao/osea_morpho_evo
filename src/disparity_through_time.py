@@ -115,7 +115,9 @@ def reconstruct_ancestral_states(tree, trait_map):
               if node.branch_length and node.branch_length > 0]
     min_bl = min(all_bl) if all_bl else 1.0
     eps = min_bl * 1e-4
+    tree.eps = eps
 
+    contrast2s = []
     # post-order traverse and calculate the weighted average
     for node in tree.get_nonterminals(order="postorder"):
         child_states = []
@@ -131,9 +133,19 @@ def reconstruct_ancestral_states(tree, trait_map):
             weights = np.array(weights)
             node.state = np.average(child_states, axis=0, weights=weights)
             node.equiv_length = 1 / weights.sum()
+
+            if len(child_states) == 2 and len(weights) == 2:
+                #  As far as I know, birdtree trees are all strict binary trees
+                contrast2s.append((child_states[0] - child_states[1]) ** 2 / np.reciprocal(weights).sum())
+            else:
+                # Generalized contrast for polytomies: weighted sum of squares around ancestor
+                weighted_squares = [weights[idx] * (state - node.state) ** 2 for idx, state in enumerate(child_states)]
+                contrast2s.append(np.array(weighted_squares).sum(axis=0))
+
         else:
             node.state = None
 
+    tree.sigma2 = np.sum(contrast2s, axis=0) / (len(trait_map) - 1)  # trait_map has the same size with leaves
     return tree
 
 
@@ -143,6 +155,22 @@ def assign_node_ages(tree):
         node.age = tree.distance(node)
     return tree
 
+
+def brownian_null_simulation(tree):
+    if not (hasattr(tree.root, "state") and tree.root.state is not None
+            and hasattr(tree, "sigma2") and tree.sigma2 is not None):
+        return tree
+
+    tree.root.null_state = tree.root.state.copy()
+    for node in tree.get_nonterminals(order="preorder"):
+        p_null = node.null_state
+        for child in node.clades:
+            t = child.branch_length if child.branch_length and child.branch_length > 0 else tree.eps
+            sd = np.sqrt(tree.sigma2 * t)
+            delta = np.random.normal(loc=0.0, scale=sd, size=p_null.shape)
+            child.null_state = p_null + delta
+
+    return tree
 
 # ---------------------------
 # Calculate the disparity
@@ -167,11 +195,15 @@ def compute_variance(vectors):
     return np.mean(sq_dists)
 
 
-def compute_dtt_time_slices(tree, num_slices=None, interval=None):
+def compute_dtt_time_slices(tree, num_slices=None, interval=None, null_test=False):
     """
     Calculate the variance of vectors across different time slices of the tree, all active branches included.
     Interpolation for intermediate nodes, real data for leaf nodes.
     """
+
+    state_key = 'state'
+    if null_test:
+        state_key = 'null_state'
 
     max_time = max(tree.depths().values())
 
@@ -196,7 +228,7 @@ def compute_dtt_time_slices(tree, num_slices=None, interval=None):
     # so we just use all extant species (terminal nodes).
     for leaf in tree.get_terminals():
         # if leaf.name in trait_map: # already aligned.
-        vectors_per_slice[len(slice_times) - 1].append(leaf.state)
+        vectors_per_slice[len(slice_times) - 1].append(getattr(leaf, state_key))
 
     # traverse every clade
     def collect_active_clades(p_node):
@@ -210,9 +242,9 @@ def compute_dtt_time_slices(tree, num_slices=None, interval=None):
             for i in range(i_start, i_end):
                 t = slice_times[i]
                 # get states of the given time
-                if hasattr(p_node, 'state') and hasattr(c_node, 'state'):
-                    p_state = p_node.state
-                    c_state = c_node.state
+                if hasattr(p_node, state_key) and hasattr(c_node, state_key):
+                    p_state = getattr(p_node, state_key)
+                    c_state = getattr(c_node, state_key)
                     if p_state is not None and c_state is not None:
                         interp_state = interpolate_state(p_state, c_state, start_time, end_time, t)
                         vectors_per_slice[i].append(interp_state)
@@ -232,7 +264,10 @@ def compute_dtt_time_slices(tree, num_slices=None, interval=None):
 # ---------------------------
 # Main function
 # ---------------------------
-def main(tree_file, load_file=None):
+def main(tree_file, load_file=None, null_test=False, sample_ratio=100):
+    # Sample_ratio only works when null_test is True,
+    # because it will take a very long time to run null_test on all 10,000 trees
+
     base_filename = os.path.basename(tree_file)
 
     name_match_file = "birdtree_name_match.csv"
@@ -247,45 +282,73 @@ def main(tree_file, load_file=None):
 
     start = time.time()
 
-    os.makedirs('output', exist_ok=True)
-    out_path = f'output/disparity_through_time-{base_filename}-{start:.0f}.csv'
     progress = get_progress(load_file) if load_file is not None else 0
 
-    with open(tree_file) as f:
-        with open(out_path, 'a') as out_file:
+    trees = open(tree_file, 'r')
+
+    if null_test:
+        os.makedirs('output_null', exist_ok=True)
+        rand_num = np.random.randint(0, sample_ratio)
+    else:
+        os.makedirs('output', exist_ok=True)
+        out_path = f'output/disparity_through_time-{base_filename}-{start:.0f}.csv'
+        out_file = open(out_path, 'a')
+        writer = csv.writer(out_file)
+
+    for i, line in enumerate(trees):
+        if i < progress:
+            continue
+
+        if null_test:
+            # choose only 1 / sample_ratio of all trees to process
+            if (i + rand_num) % sample_ratio != 0:
+                continue
+
+            out_path = f'output_null/disparity_through_time-{base_filename}-tree{i}-{start:.0f}.csv'
+            out_file = open(out_path, 'a')
             writer = csv.writer(out_file)
 
-            for i, line in enumerate(f):
-                if i < progress:
-                    continue
+        line = line.strip()
+        tree_item = read_phylogenetic_trees(line)
 
-                line = line.strip()
-                tree_item = read_phylogenetic_trees(line)
+        if trait_mapping is None:
+            trait_mapping = create_trait_mapping(tree_item, name_match, pca_weights)
 
-                if trait_mapping is None:
-                    trait_mapping = create_trait_mapping(tree_item, name_match, pca_weights)
+        remove_missing_data_nodes(tree_item, name_match)
 
-                remove_missing_data_nodes(tree_item, name_match)
+        # check whether there are more than one valid tips
+        if len(list(tree_item.get_terminals())) < 2:
+            print(f"Tree {i + 1} has insufficient number of leaves")
+            continue
 
-                # check whether there are more than one valid tips
-                if len(list(tree_item.get_terminals())) < 2:
-                    print(f"Tree {i + 1} has insufficient number of leaves")
-                    continue
+        # Do ASR and calculate the ages.
+        reconstruct_ancestral_states(tree_item, trait_mapping)
+        assign_node_ages(tree_item)
 
-                # Do ASR and calculate the ages.
-                reconstruct_ancestral_states(tree_item, trait_mapping)
-                assign_node_ages(tree_item)
+        tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, interval=1.0)
+        times, variances = zip(*dtt_results)
+        writer.writerow([tree_total_time, *variances])
 
-                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, interval=1.0)
-
+        if null_test:
+            for j in range(100):
+                brownian_null_simulation(tree_item)
+                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, interval=1.0, null_test=True)
                 times, variances = zip(*dtt_results)
-
-                print(f"[{base_filename}] It took {(time.time() - start):.2f} seconds to process {i} trees!")
-
                 writer.writerow([tree_total_time, *variances])
+                print(f"[{base_filename}] It took {(time.time() - start):.2f} seconds to process {j + 1} times "
+                      f"null test in the {i + 1}th tree!")
 
-                del line, tree_item, tree_total_time, dtt_results, times, variances
-                gc.collect()
+        print(f"[{base_filename}] It took {(time.time() - start):.2f} seconds to process {i + 1} trees!")
+
+        if null_test:
+            out_file.close()
+
+        del line, tree_item, tree_total_time, dtt_results, times, variances
+        gc.collect()
+
+    trees.close()
+    if not null_test:
+        out_file.close()
 
 if __name__ == "__main__":
     processes = []
