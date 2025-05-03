@@ -30,60 +30,57 @@ def get_progress(file_path):
     return df.shape[0]
 
 
-def remove_missing_data_nodes(tree, name_match_df):
-    """Remove nodes that have no corresponding vector from the tree
-    No excluded species included in the tree, so no need to remove them.
+def pre_process(tree, trait_map):
     """
-    missing_species = name_match_df[name_match_df.iloc[:, 2] == -1].iloc[:, 0].tolist()
-    terminals_to_remove = [terminal for terminal in tree.get_terminals() if terminal.name in missing_species]
-    for terminal in terminals_to_remove:
-        path = tree.get_path(terminal)
-        if len(path) < 2:
-            continue  # for root nodes
-        parent = path[-2]
-        parent.clades.remove(terminal)
-    # collapse nodes that have only one child (because another child may have been removed)
-    collapse_single_child_nodes(tree)
-    if tree.root.branch_length is None:
-        tree.root.branch_length = 0.0
+    Assign values to species, remove value-absent species, merge single-child branches
+    :param tree: The phylogenetic tree to be processed
+    :param trait_map: A mapping from species names to trait vectors
+    :return: The processed phylogenetic tree
+    """
+    for node in tree.find_clades(order='postorder'):
+        for index in range(len(node.clades) - 1, -1, -1):
+            child = node.clades[index]
+            if hasattr(child, 'remove') and child.remove:
+                node.clades.remove(child)
+            elif hasattr(child, 'merge') and child.merge:
+                grandchild = child.clades[0]
+                grandchild.branch_length = child.new_bl
+                node.clades[index] = grandchild
 
-
-def collapse_single_child_nodes(tree):
-    """collapse nodes that have only one child, and combine the branch lengths. traversing from the leaf nodes (species)"""
-    for clade in tree.get_nonterminals(order='postorder'):
-        while len(clade.clades) == 1 and clade != tree.root:
-            child = clade.clades[0]
-            bl_parent = clade.branch_length if clade.branch_length is not None else 0.0
+        num_children = len(node.clades)
+        if num_children == 0:
+            if node.name and node.name != '' and node.name in trait_map.keys():
+                # In cladistic taxonomy, "ancestor" is a hypothetical scientific model, not representing a real fossil
+                # species.
+                # Thus, a name indicates that it is an original leaf-node, rather than resulted by child-removing.
+                node.state = trait_map[node.name]
+            else:
+                node.state = None
+                # avoid traverse loop, because a node does not have references to its parent,
+                # it is necessary to traverse the tree to find its parent.
+                node.remove = True
+        elif num_children == 1:
+            child = node.clades[0]
+            bl_parent = node.branch_length if node.branch_length is not None else 0.0
             bl_child = child.branch_length if child.branch_length is not None else 0.0
-            new_bl = bl_parent + bl_child
-            parent = find_parent(tree, clade)
-            if parent is None:
-                break
-            index = parent.clades.index(clade)
-            parent.clades[index] = child
-            child.branch_length = new_bl
-            clade = child
+            # same as above
+            node.merge = True
+            node.new_bl = bl_parent + bl_child
+        else:
+            continue
+
+    return tree
 
 
-def find_parent(tree, target):
-    """In biopython, a node has references to its child nodes, but not parent nodes.
-    Thus, we have to traverse the tree"""
-    for clade in tree.find_clades():
-        if target in clade.clades:
-            return clade
-    return None
-
-
-def create_trait_mapping(tree, name_match_df, pca_weights_df):
+def create_trait_mapping(name_match_df, weights_df):
     """create label-trait vector mapping"""
     trait_map = {}
-    for leaf in tree.get_terminals():
-        label = leaf.name
-        match = name_match_df[name_match_df.iloc[:, 0] == label]
-        if not match.empty and match.iloc[0, 2] != -1:
-            index = int(match.iloc[0, 2])
-            if index < len(pca_weights_df):
-                trait_map[label] = pca_weights_df.iloc[index].values
+    for index, row in name_match_df.iterrows():
+        index = int(row[2])
+        label = str(row[0])
+        if index != -1:
+            if index < len(weights_df):
+                trait_map[label] = weights_df.iloc[index].values
             else:
                 print(f"Warning: Index {index} is out of the range of vectors for label {label}.")
     return trait_map
@@ -136,11 +133,16 @@ def reconstruct_ancestral_states(tree, trait_map):
 
             if len(child_states) == 2 and len(weights) == 2:
                 #  As far as I know, birdtree trees are all strict binary trees
-                contrast2s.append((child_states[0] - child_states[1]) ** 2 / np.reciprocal(weights).sum())
+                contrast2 = (child_states[0] - child_states[1]) ** 2 / np.reciprocal(weights).sum()
             else:
                 # Generalized contrast for polytomies: weighted sum of squares around ancestor
                 weighted_squares = [weights[idx] * (state - node.state) ** 2 for idx, state in enumerate(child_states)]
-                contrast2s.append(np.array(weighted_squares).sum(axis=0))
+                contrast2 = np.array(weighted_squares).sum(axis=0)
+
+            # if sorted(contrast2.tolist(), reverse=True)[0] > 5:
+            #     breakpoint()
+
+            contrast2s.append(contrast2)
 
         else:
             node.state = None
@@ -278,7 +280,7 @@ def main(tree_file, load_file=None, null_test=False, sample_ratio=100):
     # read PCA reduced weights vectors
     pca_weights = read_csv(pca_weights_file)
 
-    trait_mapping = None
+    trait_mapping = create_trait_mapping(name_match, pca_weights)
 
     start = time.time()
 
@@ -288,7 +290,8 @@ def main(tree_file, load_file=None, null_test=False, sample_ratio=100):
 
     if null_test:
         os.makedirs('output_null', exist_ok=True)
-        rand_num = np.random.randint(0, sample_ratio)
+        rand_num = 1  # fixed number for outlier SC test
+        # rand_num = np.random.randint(0, sample_ratio)
     else:
         os.makedirs('output', exist_ok=True)
         out_path = f'output/disparity_through_time-{base_filename}-{start:.0f}.csv'
@@ -311,10 +314,7 @@ def main(tree_file, load_file=None, null_test=False, sample_ratio=100):
         line = line.strip()
         tree_item = read_phylogenetic_trees(line)
 
-        if trait_mapping is None:
-            trait_mapping = create_trait_mapping(tree_item, name_match, pca_weights)
-
-        remove_missing_data_nodes(tree_item, name_match)
+        pre_process(tree_item, trait_mapping)
 
         # check whether there are more than one valid tips
         if len(list(tree_item.get_terminals())) < 2:
