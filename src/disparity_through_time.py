@@ -9,6 +9,7 @@ import gc
 import numpy as np
 import pandas as pd
 from Bio import Phylo
+from Bio.Phylo.BaseTree import Tree
 
 
 # ---------------------------
@@ -29,6 +30,64 @@ def get_progress(file_path):
     df = pd.read_csv(file_path, header=None)
     return df.shape[0]
 
+
+def get_species_by_group(csv_file, target_group, level='order'):
+    """
+    get species list of specific group from bird_info.csv (e.g. PASSERIFORMES)
+    """
+    target_species = set()
+
+    if level == 'order':
+        group_idx = 4
+    elif level == 'family':
+        group_idx = 5
+    else:
+        raise ValueError("Level must be 'order' or 'family'")
+
+    with open(csv_file, 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if len(row) > group_idx and row[group_idx] == target_group:
+                name = row[2].replace(' ', '_')
+                target_species.add(name)
+    return target_species
+
+
+def extract_subclade(tree, target_species_set):
+    """
+    extract subclade from bird_info.csv (e.g. PASSERIFORMES)
+    """
+    # find all existing leaf nodes that belongs to this group
+    present_targets = [leaf for leaf in tree.get_terminals() if leaf.name in target_species_set]
+
+    if len(present_targets) < 2:
+        return None  # too little to conduct an analysis
+
+    # find MRCA
+    mrca = tree.common_ancestor(present_targets)
+
+    new_tree = Tree(root=mrca)
+
+    return new_tree
+
+
+def prune_subclade(tree, target_species_set):
+    """
+    remove subclade from bird_info.csv (e.g. PASSERIFORMES)
+    """
+    # find all leaf nodes
+    to_prune = [leaf for leaf in tree.get_terminals() if leaf.name in target_species_set]
+
+    for leaf in to_prune:
+        try:
+            tree.prune(leaf)
+        except ValueError:
+            continue
+
+    if len(list(tree.get_terminals())) < 2:
+        return None
+
+    return tree
 
 def pre_process(tree, trait_map):
     """
@@ -115,6 +174,7 @@ def reconstruct_ancestral_states(tree, trait_map):
     tree.eps = eps
 
     contrast2s = []
+
     # post-order traverse and calculate the weighted average
     for node in tree.get_nonterminals(order="postorder"):
         child_states = []
@@ -126,18 +186,76 @@ def reconstruct_ancestral_states(tree, trait_map):
                 weight = 1.0 / (bl + equiv_bl)
                 weights.append(weight)
                 child_states.append(child.state)
+
         if child_states:
             weights = np.array(weights)
-            node.state = np.average(child_states, axis=0, weights=weights)
+            # Standard weighted average (Geometric Center)
+
+            raw_state = np.average(child_states, axis=0, weights=weights)
+
+            # Project the averaged vector back to the hypersphere surface
+            current_norm = np.linalg.norm(raw_state)
+            if current_norm > 1e-9:  # Avoid division by zero
+                node.state = raw_state / current_norm
+            else:
+                node.state = raw_state
+
             node.equiv_length = 1 / weights.sum()
 
+            # Calculate contrasts (using the corrected state for consistency)
             if len(child_states) == 2 and len(weights) == 2:
-                #  As far as I know, birdtree trees are all strict binary trees
-                contrast2 = (child_states[0] - child_states[1]) ** 2 / np.reciprocal(weights).sum()
+                # Euclidean Squared Distance, Chord Length^2
+                raw_diff = child_states[0] - child_states[1]
+                euclidean_sq_dist = np.sum(raw_diff ** 2)
+
+                # PIC based on Euclidean Distance
+                contrast2 = (raw_diff ** 2) / np.reciprocal(weights).sum()
+
+                # Correction Factor
+                # chord length ^ 2 = euclidean_sq_dist
+                # arc length (Theta) = arccos(dot_product)
+
+                # dot product
+                dot_prod = np.dot(child_states[0], child_states[1])
+                dot_prod = np.clip(dot_prod, -1.0, 1.0)
+
+                # arc length (Geodesic Distance)
+                theta = np.arccos(dot_prod)
+                arc_sq_dist = theta ** 2
+
+                # correction factor: Arc^2 / Chord^2
+                if euclidean_sq_dist > 1e-9:
+                    correction_factor = arc_sq_dist / euclidean_sq_dist
+                else:
+                    # if their location is identical (euclidean_sq_dist ~= 0)
+                    correction_factor = 1.0
+
+                # applying correction, enlarge it to the hypersphere
+                contrast2 = contrast2 * correction_factor
+
             else:
-                # Generalized contrast for polytomies: weighted sum of squares around ancestor
-                weighted_squares = [weights[idx] * (state - node.state) ** 2 for idx, state in enumerate(child_states)]
-                contrast2 = np.array(weighted_squares).sum(axis=0)
+                # Generalized contrast for polytomies
+                contrast2 = np.zeros_like(node.state)
+                sum_inv_weights = 0
+
+                for idx, state in enumerate(child_states):
+                    weight = weights[idx]
+
+                    # euclidean difference vector
+                    diff_vec = state - node.state
+                    eu_dist_sq = np.sum(diff_vec ** 2)
+
+                    # chord length ^ 2
+                    dp = np.dot(state, node.state)
+                    dp = np.clip(dp, -1.0, 1.0)
+                    arc_dist_sq = np.arccos(dp) ** 2
+
+                    # correction factor
+                    factor = 1.0
+                    if eu_dist_sq > 1e-9:
+                        factor = arc_dist_sq / eu_dist_sq
+
+                    contrast2 += weight * (diff_vec ** 2) * factor
 
             # if sorted(contrast2.tolist(), reverse=True)[0] > 5:
             #     breakpoint()
@@ -147,7 +265,8 @@ def reconstruct_ancestral_states(tree, trait_map):
         else:
             node.state = None
 
-    tree.sigma2 = np.sum(contrast2s, axis=0) / (len(trait_map) - 1)  # trait_map has the same size with leaves
+    num_tips = len(list(tree.get_terminals()))
+    tree.sigma2 = np.sum(contrast2s, axis=0) / (num_tips - 1)  # trait_map has the same size with leaves
     return tree
 
 
@@ -159,20 +278,62 @@ def assign_node_ages(tree):
 
 
 def brownian_null_simulation(tree):
+    """
+    Riemannian Brownian Motion on the Unit Hypersphere, Simulating the Neutral Evolution
+
+    Assumption:
+        The input tree.root.state is already L2-normalised (Unit Vector).
+    Mechanism:
+        1. Projects Euclidean noise onto the tangent space (Gram-Schmidt).
+        2. Use the Exponential Map (Geodesic flow) to move along the great circle.
+    """
+    # tree check
     if not (hasattr(tree.root, "state") and tree.root.state is not None
             and hasattr(tree, "sigma2") and tree.sigma2 is not None):
         return tree
 
+    # initialise the root node
     tree.root.null_state = tree.root.state.copy()
+
+    # preorder simulation
     for node in tree.get_nonterminals(order="preorder"):
-        p_null = node.null_state
+        # get state of the current node
+        parent_vect = node.null_state
+
         for child in node.clades:
+            # branch length t
             t = child.branch_length if child.branch_length and child.branch_length > 0 else tree.eps
+
+            # Generate the Gaussian noise and project it onto the tangent space
+            # sigma2 = diffusion rate; t = time
             sd = np.sqrt(tree.sigma2 * t)
-            delta = np.random.normal(loc=0.0, scale=sd, size=p_null.shape)
-            child.null_state = p_null + delta
+            euclidean_displacement = np.random.normal(loc=0.0, scale=sd, size=parent_vect.shape)
+
+            # Project to Tangent Space
+            # v_tan = v_raw - <v_raw, parent_vect> * parent_vect
+            # Remove the radial component, keep the component perpendicular to parent_vect
+            dot_product = np.dot(euclidean_displacement, parent_vect)
+            tangent_vector = euclidean_displacement - dot_product * parent_vect
+
+            # Exponential Map
+            # calculate the length of tangent vector (theta), this is the length we're going to move on the hypersphere
+            theta = np.linalg.norm(tangent_vector)
+
+            # Avoid dividing by zero
+            if theta < 1e-15:
+                child.null_state = parent_vect.copy()
+            else:
+                tangent_direction = tangent_vector / theta
+
+                # move following a great circle:
+                # new_vector = old_vector * cos(theta) + tangent_direction * sin(theta)
+                # although len(result) in mathematically inherently == 1,
+                # re-normalisation is still necessary to avoid float error
+                child.null_state = parent_vect * np.cos(theta) + tangent_direction * np.sin(theta)
+                child.null_state /= np.linalg.norm(child.null_state)  # Re-normalise to correct drift
 
     return tree
+
 
 # ---------------------------
 # Calculate the disparity
@@ -197,15 +358,41 @@ def compute_variance(vectors):
     return np.mean(sq_dists)
 
 
-def compute_dtt_time_slices(tree, num_slices=None, interval=None, null_test=False):
+def compute_spherical_variance(vectors):
+    """
+    Compute Spherical Variance (1 - resultant_length).
+    Input vectors will be normalised internally.
+    Range: [0, 1]
+    """
+    if len(vectors) < 2:
+        return 0.0
+
+    arr = np.array(vectors)
+
+    # L2 Normalise input vectors to unit length
+    # This eliminates the "shrinkage" artefact completely
+    norms = np.linalg.norm(arr, axis=1, keepdims=True)
+    # Avoid division by zero for zero-vectors (though rare in ResNet)
+    norms[norms < 1e-9] = 1.0
+    normalized_arr = arr / norms
+
+    # Calculate Mean Resultant Vector
+    mean_vec = np.mean(normalized_arr, axis=0)
+
+    # Resultant Length
+    R = np.linalg.norm(mean_vec)
+
+    # Spherical Variance
+    return 1.0 - R
+
+
+def compute_dtt_time_slices(tree, num_slices=None, interval=None):
     """
     Calculate the variance of vectors across different time slices of the tree, all active branches included.
     Interpolation for intermediate nodes, real data for leaf nodes.
     """
 
     state_key = 'state'
-    if null_test:
-        state_key = 'null_state'
 
     max_time = max(tree.depths().values())
 
@@ -257,7 +444,7 @@ def compute_dtt_time_slices(tree, num_slices=None, interval=None, null_test=Fals
     results = []
     for i in range(len(slice_times)):
         t = slice_times[i]
-        variance = compute_variance(vectors_per_slice[i])
+        variance = compute_spherical_variance(vectors_per_slice[i])
         results.append((t, variance))
 
     return max_time, results
@@ -266,7 +453,12 @@ def compute_dtt_time_slices(tree, num_slices=None, interval=None, null_test=Fals
 # ---------------------------
 # Main function
 # ---------------------------
-def main(tree_file, load_file=None, null_test=False, sample_ratio=100):
+MODE_FULL = "full"
+MODE_PASSERINES = "passerines"
+MODE_NON_PASSERINES = "non_passerines"
+
+
+def main(tree_file, load_file=None, null_test=False, sample_ratio=100, mode=MODE_FULL):
     # Sample_ratio only works when null_test is True,
     # because it will take a very long time to run null_test on all 10,000 trees
 
@@ -282,37 +474,64 @@ def main(tree_file, load_file=None, null_test=False, sample_ratio=100):
 
     trait_mapping = create_trait_mapping(name_match, pca_weights)
 
+    passerine_species = set()
+    if mode in [MODE_PASSERINES, MODE_NON_PASSERINES]:
+        passerine_species = get_species_by_group("bird_info.csv", "PASSERIFORMES", level='order')
+
+    output_dir = f'output_{mode}' if not null_test else f'output_{mode}_null'
+    os.makedirs(output_dir, exist_ok=True)
+
     start = time.time()
 
     progress = get_progress(load_file) if load_file is not None else 0
 
-    trees = open(tree_file, 'r')
+    with open(tree_file, 'r') as f:
+        first_line = f.readline().strip().upper()
+        if first_line.startswith("#NEXUS"):
+            tree_format = "nexus"
+        else:
+            tree_format = "newick"
 
     if null_test:
-        os.makedirs('output_null', exist_ok=True)
         rand_num = 1  # fixed number for outlier SC test
         # rand_num = np.random.randint(0, sample_ratio)
     else:
-        os.makedirs('output', exist_ok=True)
-        out_path = f'output/disparity_through_time-{base_filename}-{start:.0f}.csv'
+        out_path = f'{output_dir}/disparity_through_time-{mode}_{base_filename}-{start:.0f}.csv'
         out_file = open(out_path, 'a')
         writer = csv.writer(out_file)
 
-    for i, line in enumerate(trees):
+    if tree_format == "nexus":
+        trees = [Phylo.read(tree_file, "nexus")]
+    else:
+        trees = open(tree_file, 'r')
+
+    for i, tree_item in enumerate(trees):
         if i < progress:
             continue
 
         if null_test:
             # choose only 1 / sample_ratio of all trees to process
-            if (i + rand_num) % sample_ratio != 0:
+            if (i + rand_num) % sample_ratio != 0 and tree_format == "newick":
                 continue
 
-            out_path = f'output_null/disparity_through_time-{base_filename}-tree{i}-{start:.0f}.csv'
+            out_path = f'{output_dir}/disparity_through_time-{base_filename}-tree{i}-{start:.0f}.csv'
             out_file = open(out_path, 'a')
             writer = csv.writer(out_file)
 
-        line = line.strip()
-        tree_item = read_phylogenetic_trees(line)
+        if tree_format == "newick":
+            tree_item = tree_item.strip()
+            tree_item = read_phylogenetic_trees(tree_item)
+
+        if mode == MODE_PASSERINES:
+            tree_item = extract_subclade(tree_item, passerine_species)
+            if tree_item is None:
+                print(f"Tree {i} has insufficient Passerines.")
+                continue
+        elif mode == MODE_NON_PASSERINES:
+            tree_item = prune_subclade(tree_item, passerine_species)
+            if tree_item is None:
+                print(f"Tree {i} has insufficient Non-Passerines.")
+                continue
 
         pre_process(tree_item, trait_mapping)
 
@@ -332,31 +551,44 @@ def main(tree_file, load_file=None, null_test=False, sample_ratio=100):
         if null_test:
             for j in range(100):
                 brownian_null_simulation(tree_item)
-                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, interval=1.0, null_test=True)
+
+                # construct a trait_map, with only simulated leaf nodes
+                simulated_trait_map = {}
+                for leaf in tree_item.get_terminals():
+                    if hasattr(leaf, 'null_state'):
+                        simulated_trait_map[leaf.name] = leaf.null_state
+
+                reconstruct_ancestral_states(tree_item, simulated_trait_map)
+                tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, interval=1.0)
+
                 times, variances = zip(*dtt_results)
                 writer.writerow([tree_total_time, *variances])
                 print(f"[{base_filename}] It took {(time.time() - start):.2f} seconds to process {j + 1} times "
                       f"null test in the {i + 1}th tree!")
 
-        print(f"[{base_filename}] It took {(time.time() - start):.2f} seconds to process {i + 1} trees!")
+        print(f"[{base_filename} - {mode}] It took {(time.time() - start):.2f} seconds to process {i + 1} trees!")
 
         if null_test:
             out_file.close()
 
-        del line, tree_item, tree_total_time, dtt_results, times, variances
+        del tree_item, tree_total_time, dtt_results, times, variances
         gc.collect()
 
-    trees.close()
+    if tree_format == "newick":
+        trees.close()
+
     if not null_test:
         out_file.close()
 
+
 if __name__ == "__main__":
-    processes = []
-
-    for file in os.listdir('CombinedTrees/'):
-        p = Process(target=main, args=(f'CombinedTrees/{file}',))
-        p.start()
-        processes.append(p)
-
-    for p in processes:
-        p.join()
+    # processes = []
+    # for file in os.listdir('CombinedTrees/'):
+    #     for mode in [MODE_FULL, MODE_PASSERINES, MODE_NON_PASSERINES]:
+    #         p = Process(target=main, args=(f'CombinedTrees/{file}', None, False, 100, mode))
+    #         p.start()
+    #         processes.append(p)
+    #
+    # for p in processes:
+    #     p.join()
+    main("CombinedTrees/Avian-TimeTree.tre", null_test=True)

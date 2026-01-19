@@ -8,8 +8,10 @@ from scipy.stats import spearmanr, pearsonr, linregress
 
 data = []
 
-LEVEL = 'family'
+LEVEL = 'order'
 
+# content of data:
+# row[0]: name of taxa; row[1]: disparity; row[2] diversity (species richness)
 with open(f"disparity_{LEVEL}.csv", 'r') as f:
     reader = csv.reader(f)
     for row in reader:
@@ -66,5 +68,6 @@ plt.ylabel('Morphological disparity (vector variances) (Y)', fontsize=16)
 plt.title(f'Power Law Fit ({LEVEL}-level)', fontsize=20)
 plt.legend()
 
+plt.savefig(f"group-disparity-{LEVEL}-level", dpi=300)
 plt.tight_layout()
 plt.show()

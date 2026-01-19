@@ -5,8 +5,8 @@ import numpy as np
 # from scipy.stats import sem, t
 from scipy.interpolate import interp1d
 
-data_dir = 'output_intervals'
-data_type = 'interval' # 'num_slice'
+data_dir = 'output'
+data_type = 'interval'
 time_interval = 1.0
 
 data = []
@@ -32,61 +32,57 @@ for filename in os.listdir(data_dir):
                 data.append(nums)
 
                 if data_type == 'num_slice':
-                    time = np.linspace(0 - time_length, 0, 200)
+                    # time = np.linspace(0 - time_length, 0, 200)
+                    time = np.linspace(0 - time_length, 0, len(nums))
                 elif data_type == 'interval':
                     time = range(2 - len(nums), 1)
                     time = [0 - time_length, *time]
                 times.append(time)
 
-                rand_num = np.random.randint(0, 50)
-                if rand_num == 0:  # random drawing, otherwise lines will be hard to distinguish
-                    plt.plot(time, nums, color='grey', linewidth=0.5, alpha=0.5)
+                # rand_num = np.random.randint(0, 50)
+                # if rand_num == 0:  # random drawing, otherwise lines will be hard to distinguish
+                plt.plot(time, nums, color='grey', linewidth=0.5, alpha=0.5)
 
 # get the range of data for interpolating sampling
-all_y = np.concatenate(data)
-y_min, y_max = np.nanmin(all_y), np.nanmax(all_y)
+all_x = np.concatenate(times)
+x_min, x_max = np.nanmin(all_x), np.nanmax(all_x)
 
 # interpolating points
-y_common = np.linspace(y_min, y_max, 300)
+x_common = np.linspace(x_min, x_max, 300)
 
-# interpolated result
-interpolated_x = []
+interpolated_y = []
 
 for x, y in zip(times, data):
-    y = np.array(y)
     x = np.array(x)
+    y = np.array(y)
 
-    if len(x) < 2 or len(y) < 2:
-        continue
-
-    sort_idx = np.argsort(y)
-    y_sorted = y[sort_idx]
+    sort_idx = np.argsort(x)
     x_sorted = x[sort_idx]
+    y_sorted = y[sort_idx]
 
-    y_unique, unique_idx = np.unique(y_sorted, return_index=True)
-    x_unique = x_sorted[unique_idx]
+    x_unique, unique_idx = np.unique(x_sorted, return_index=True)
+    y_unique = y_sorted[unique_idx]
 
-    if len(y_unique) < 2:
+    if len(x_unique) < 2:
         continue
 
     try:
-        f = interp1d(y_unique, x_unique, bounds_error=False, fill_value=np.nan)
-        x_interp = f(y_common)
-        interpolated_x.append(x_interp)
+        f = interp1d(x_unique, y_unique, kind='linear', bounds_error=False, fill_value=(0.0, np.nan))
+        y_interp = f(x_common)
+        interpolated_y.append(y_interp)
     except Exception as e:
         continue
 
-interpolated_x = np.array(interpolated_x)
+interpolated_y = np.array(interpolated_y)
 
-mean_x = np.nanmean(interpolated_x, axis=0)
-# ci = sem(interpolated_x, axis=0, nan_policy='omit') * t.ppf(0.975, df=interpolated_x.shape[0] - 1)
+mean_y = np.nanmean(interpolated_y, axis=0)
 
-plt.plot(mean_x, y_common, color='blue', label='Mean X=f(Y)')
-plt.xlabel('X-axis')
-plt.ylabel('Y-axis')
-plt.title('Mean Curve')
+plt.plot(x_common, mean_y, color='blue', label='Mean Disparity (Average Y)')
+plt.xlabel('Time (Myr)')
+plt.ylabel('Disparity (Spherical Variance)')
+plt.title('Disparity Through Time')
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(os.path.join(data_dir, 'mean_x.png'))
+plt.savefig(os.path.join(data_dir, 'dtt_plot.png'))
 plt.show()

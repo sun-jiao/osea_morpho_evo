@@ -1,76 +1,150 @@
 import os
-
 import matplotlib.pyplot as plt
 import numpy as np
-# from scipy.stats import sem, t
 from scipy.interpolate import interp1d
 
-data_dir = 'output_null'
-filename = 'disparity_through_time-HackettStage1Full_1.tre-tree4-1745573018.csv'
+data_dir = 'output_full_null'
 data_type = 'interval' # 'num_slice'
-time_interval = 1.0
+output_image_name = 'dtt_null_test_combined.png'
 
-data = []
+empirical_data = []
+null_data = []
 
-plt.figure(figsize=(15, 10))
+print(f"Loading data from {data_dir}...")
 
-filepath = os.path.join(data_dir, filename)
-with open(filepath) as f:
-    for line in f:
-        parts = line.strip().split(',')
-        if len(parts) < 3:
-            continue
-        try:
-            nums = list(map(float, parts))
-        except ValueError:
-            continue
+files = [f for f in os.listdir(data_dir) if f.endswith('.csv')]
+if not files:
+    raise FileNotFoundError(f"No csv files found in {data_dir}")
 
-        time_length = nums[0]
-        nums = nums[1:]
+for filename in files:
+    filepath = os.path.join(data_dir, filename)
+
+    current_file_lines = []
+    with open(filepath) as f:
+        # read the whole file
+        for line in f:
+            parts = line.strip().split(',')
+            if len(parts) < 3:
+                continue
+            try:
+                nums = list(map(float, parts))
+                current_file_lines.append(nums)
+            except ValueError:
+                continue
+
+    if not current_file_lines:
+        continue
+
+    for idx, lines in enumerate(current_file_lines):
+        time_len = lines[0]
+        vals = lines[1:]
 
         if data_type == 'num_slice':
-            time = np.linspace(0 - time_length, 0, 200)
-        elif data_type == 'interval':
-            time = range(2 - len(nums), 1)
-            time = [0 - time_length, *time]
+            time = np.linspace(0 - time_len, 0, len(vals))
+        else:
+            # suppose interval=1.0, and the timeline is: -Length, -Length + 1, ..., -1, 0
+            time = np.linspace(-time_len, 0, len(vals))
 
-        data.append([(t, v) for t, v in zip(time, nums)])
+        # first line: empirical data, other lines: null data
+        (empirical_data if idx == 0 else null_data).append((time, np.array(vals)))
 
-        plt.plot(time, nums, color='grey', linewidth=0.1, alpha=0.5)
+print(f"Loaded {len(empirical_data)} empirical curves and {len(null_data)} null simulations.")
+
+all_times = [x for x, y in empirical_data] + [x for x, y in null_data]
+all_x_flat = np.concatenate(all_times)
+x_min, x_max = np.nanmin(all_x_flat), np.nanmax(all_x_flat)
+
+x_common = np.linspace(x_min, x_max, 500)
 
 
-reconstructed_values = data[0]
-all_null_simulations = data[1:]
+# Interpolation
+def interpolate_to_common(data_list, common_x):
+    interpolated_results = []
+    for x, y in data_list:
+        # Deduplication and sorting data
+        sort_idx = np.argsort(x)
+        x_sorted = x[sort_idx]
+        y_sorted = y[sort_idx]
+
+        x_unique, unique_idx = np.unique(x_sorted, return_index=True)
+        y_unique = y_sorted[unique_idx]
+
+        if len(x_unique) < 2:
+            continue
+
+        try:
+            # Key: fill_value=(0.0, np.nan)
+            # Solves the NaN problem when some trees have not yet started, setting it to 0
+            f = interp1d(x_unique, y_unique, kind='linear', bounds_error=False, fill_value=(0.0, np.nan))
+            y_interp = f(common_x)
+            interpolated_results.append(y_interp)
+        except Exception:
+            continue
+
+    return np.array(interpolated_results)
 
 
-# Assuming all lists (reconstructed and simulations) have the same time points
-# and are ordered consistently. Extract times and reconstructed values.
-times = np.array([item[0] for item in reconstructed_values])
-reconstructed_vals = np.array([item[1] for item in reconstructed_values])
+print("Interpolating Empirical data...")
+emp_matrix = interpolate_to_common(empirical_data, x_common)
 
-# Convert each simulation list to a numpy array of values
-sim_values_only = [np.array([item[1] for item in sim]) for sim in all_null_simulations]
+print("Interpolating Null data (this might take a moment)...")
+null_matrix = interpolate_to_common(null_data, x_common)
 
-# Stack these arrays. This assumes all simulations have the same length.
-# If simulations have different lengths, a more complex grouping by time is needed.
-sim_values_stacked = np.vstack(sim_values_only)
+# Empirical mean value
+mean_empirical = np.nanmean(emp_matrix, axis=0)
 
-# Calculate 2.5th and 97.5th percentiles along the first axis (across simulations)
-# This gives the lower and upper bounds for each time point.
-lower_bound = np.percentile(sim_values_stacked, 2.5, axis=0)
-upper_bound = np.percentile(sim_values_stacked, 97.5, axis=0)
+# Null mean value and 95% CI (2.5% - 97.5%)
+mean_null = np.nanmean(null_matrix, axis=0)
+lower_null = np.nanpercentile(null_matrix, 2.5, axis=0)
+upper_null = np.nanpercentile(null_matrix, 97.5, axis=0)
 
-# Plot the reconstructed values
-plt.plot(times, reconstructed_vals, label='Reconstructed Values', color='blue', linestyle='-')
+print("Plotting...")
+plt.rcParams['font.size'] = 15
+plt.figure(figsize=(15, 10))
 
-# Plot the 95% range as a shaded area
-plt.fill_between(times, lower_bound, upper_bound, color='gray', alpha=0.3, label='95% Null Range')
+# Null Range (grey shadow)
+plt.fill_between(x_common, lower_null, upper_null, color='gray', alpha=0.3, label='95% Null Range')
 
-# Add labels and title
-plt.xlabel('Time')
-plt.ylabel('Value')
-plt.title('Reconstructed Values vs. 95% Null Simulation Range')
-plt.legend()
-plt.grid(True)
+# Null Mean (grey line)
+plt.plot(x_common, mean_null, color='gray', linestyle='--', linewidth=1.5, label='Mean Brownian Motion Simulation')
+
+# Empirical Mean (blue line)
+plt.plot(x_common, mean_empirical, color='blue', linewidth=2.5, label='Mean Empirical (Reconstructed)')
+
+# K-Pg mass extinction event
+# plt.axvline(x=-66, color='red', linestyle='--', linewidth=2, label='K-Pg mass extinction')
+
+# K-Pg boundary
+target_x = -66
+line_color = 'red'
+line_label_text = 'K-Pg boundary'
+
+plt.vlines(x=target_x, ymin = 0, ymax = 0.7, color=line_color, linestyle='--', linewidth=2, alpha=0.8, zorder=5)
+
+ax = plt.gca()
+
+# Add text displayed on the line
+plt.text(target_x, 0.5, line_label_text,
+         rotation=90,
+         color=line_color,
+         horizontalalignment='center',
+         verticalalignment='center',
+         fontweight='regular',
+         fontsize=20,
+         bbox=dict(facecolor='white', alpha=1, edgecolor='none', pad=4.0),
+         transform=ax.get_xaxis_transform(),
+         zorder=6)
+
+# =========================================
+
+plt.xlabel('Time (Mya)')
+plt.ylabel('Morphological Disparity (Spherical Variance)')
+plt.title('Disparity Through Time: Empirical vs. Null Model (Aggregated)')
+plt.legend(loc='upper left')
+plt.grid(True, which='both', linestyle='--', alpha=0.7)
+plt.xlim(x_min - 0.5, 0)
+plt.ylim(0, 0.8)
+plt.tight_layout()
+plt.savefig(output_image_name, dpi=300)
+print(f"Done! Plot saved to {output_image_name}")
 plt.show()
-

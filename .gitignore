@@ -12,3 +12,5 @@ src/CombinedTrees
 *.png
 *.zip
 *.jpg
+*\aibrandcfg
+*.pdf

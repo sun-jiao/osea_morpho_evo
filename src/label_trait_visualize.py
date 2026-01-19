@@ -69,7 +69,7 @@ def generate_contrastive_cam(model, input_tensor, target_classes, excluded_class
 
     cam = F.interpolate(cam, size=(224, 224), mode='bilinear', align_corners=False)
     cam = cam.squeeze().cpu().numpy()
-    cam = cam ** 1.8  # 增强对比
+    cam = cam ** 1.8
     cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
     return cam
 
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     target_layer.register_backward_hook(backward_hook)
 
     # 2. Load image
-    img_path = '/home/sunjiao/Pictures/勺嘴鹬/59932061-2.jpg'  # 替换成你的图片路径
+    img_path = '/home/sunjiao/Pictures/勺嘴鹬/59932061-2.jpg'
     input_tensor, img_np = load_image(img_path)
 
     # 3. Grad-CAM
