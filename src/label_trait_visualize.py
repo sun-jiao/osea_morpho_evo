@@ -6,13 +6,14 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from PIL import Image
 from torchvision.models import resnet34
+from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam.utils.image import show_cam_on_image
 
 # -----------------------------
 # Config
 # -----------------------------
-class_A = [1592]
-class_B = list(range(1584, 1592))
-class_B.extend(list(range(1593, 1606)))
+class_A = list(range(0, 11000))
+class_B = []
 
 # -----------------------------
 # Preprocessing
@@ -48,16 +49,23 @@ def backward_hook(module, grad_input, grad_output):
 # -----------------------------
 # Grad-CAM Core
 # -----------------------------
-def generate_contrastive_cam(model, input_tensor, target_classes, excluded_classes, mode='diff'):
+def generate_contrastive_cam(model, input_tensor, target_classes=None, excluded_classes=None, mode='all'):
+    if excluded_classes is None:
+        excluded_classes = []
+    if target_classes is None:
+        target_classes = []
+
     model.eval()
     output = model(input_tensor)
     target_score = output[0, target_classes].mean()
     excluded_score = output[0, excluded_classes].mean()
 
-    if mode == 'diff':
-        score = target_score - excluded_score
+    if mode == 'all':
+        score = output.mean()
     elif mode == 'common':
         score = target_score + excluded_score
+    elif mode == 'diff':
+        score = target_score - excluded_score
     else:
         raise ValueError("mode must be 'diff' or 'common'")
 
@@ -69,7 +77,7 @@ def generate_contrastive_cam(model, input_tensor, target_classes, excluded_class
 
     cam = F.interpolate(cam, size=(224, 224), mode='bilinear', align_corners=False)
     cam = cam.squeeze().cpu().numpy()
-    cam = cam ** 1.8
+    cam = cam ** 2
     cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-8)
     return cam
 
@@ -90,7 +98,7 @@ def overlay_cam_on_image(img_np, cam):
         img_np = (img_np * 255).astype(np.uint8)
 
     # 3. Overlay
-    overlay = cv2.addWeighted(img_np, 0.5, heatmap, 0.5, 0)
+    overlay = cv2.addWeighted(img_np, 0.8, heatmap, 0.5, 0)
     return overlay
 
 
@@ -113,11 +121,11 @@ if __name__ == '__main__':
     target_layer.register_backward_hook(backward_hook)
 
     # 2. Load image
-    img_path = '/home/sunjiao/Pictures/勺嘴鹬/59932061-2.jpg'
+    img_path = '/home/sunjiao/Pictures/✔A9/20221216-鄱阳湖/A9_05954.jpg'
     input_tensor, img_np = load_image(img_path)
 
     # 3. Grad-CAM
-    cam = generate_contrastive_cam(model, input_tensor, class_A, class_B, mode='diff')
+    cam = generate_contrastive_cam(model, input_tensor, mode='all')
     overlay = overlay_cam_on_image(img_np, cam)
 
     # 4. Show result
@@ -128,7 +136,7 @@ if __name__ == '__main__':
     plt.axis('off')
 
     plt.subplot(1,2,2)
-    plt.title(f"Why class {class_A} > class {class_B}")
+    plt.title(f"Grad-CAM")
     plt.imshow(overlay[..., ::-1])  # Convert BGR to RGB
     plt.axis('off')
 
