@@ -188,73 +188,107 @@ def reconstruct_ancestral_states(tree, trait_map):
                 child_states.append(child.state)
 
         if child_states:
+            """
+                Computes the ancestral state and independent contrasts for spherical data.
+
+                Strategy:
+                - N=2: Uses Exact Spherical Linear Interpolation (SLERP).
+                - N>2: Uses Projected Arithmetic Mean with Geometric Correction.
+                """
             weights = np.array(weights)
-            # Standard weighted average (Geometric Center)
+            child_states = np.array(child_states)
 
-            raw_state = np.average(child_states, axis=0, weights=weights)
+            # 1. Calculate Equivalent Length (Felsenstein, 1985)
+            # This is topology-dependent, not geometry-dependent.
+            node.equiv_length = 1.0 / weights.sum()
 
-            # Project the averaged vector back to the hypersphere surface
-            current_norm = np.linalg.norm(raw_state)
-            if current_norm > 1e-9:  # Avoid division by zero
-                node.state = raw_state / current_norm
-            else:
-                node.state = raw_state
+            # 2. Hybrid State Reconstruction & Contrast Calculation
 
-            node.equiv_length = 1 / weights.sum()
+            # CASE A: Bifurcation (N=2) -> Use Geometric Exact Solution (SLERP)
+            if len(child_states) == 2:
+                vec_a = child_states[0]
+                vec_b = child_states[1]
 
-            # Calculate contrasts (using the corrected state for consistency)
-            if len(child_states) == 2 and len(weights) == 2:
-                # Euclidean Squared Distance, Chord Length^2
-                raw_diff = child_states[0] - child_states[1]
+                # Calculate angle theta (Geodesic distance)
+                dot_prod = np.dot(vec_a, vec_b)
+                dot_prod = np.clip(dot_prod, -1.0, 1.0)
+                theta = np.arccos(dot_prod)
+
+                # --- State Reconstruction: SLERP ---
+                if theta < 1e-9:
+                    # If vectors are identical, simple average avoids division by zero
+                    node.state = vec_a
+                else:
+                    # Calculate interpolation factor t based on weights
+                    # P = (sin((1-t)θ)/sinθ) * A + (sin(tθ)/sinθ) * B
+                    # Weight w1 pulls towards B, so t = w1 / (w0 + w1)
+                    t = weights[1] / weights.sum()
+
+                    sin_theta = np.sin(theta)
+                    coeff_a = np.sin((1 - t) * theta) / sin_theta
+                    coeff_b = np.sin(t * theta) / sin_theta
+
+                    node.state = coeff_a * vec_a + coeff_b * vec_b
+
+                    # Re-normalize to ensure numerical stability on the manifold
+                    # (SLERP theoretically stays on sphere, but float errors accumulate)
+                    node.state = node.state / np.linalg.norm(node.state)
+
+                # --- Contrast Calculation ---
+                # Even with SLERP, we need a vector representing the contrast.
+                # We use the Scaled Euclidean Difference to approximate the Tangent Vector.
+                # Scale = Arc_Length / Chord_Length
+
+                raw_diff = vec_a - vec_b
                 euclidean_sq_dist = np.sum(raw_diff ** 2)
 
-                # PIC based on Euclidean Distance
-                contrast2 = (raw_diff ** 2) / np.reciprocal(weights).sum()
+                # Base PIC variance (Euclidean)
+                contrast_variance = (raw_diff ** 2) / np.reciprocal(weights).sum()
 
-                # Correction Factor
-                # chord length ^ 2 = euclidean_sq_dist
-                # arc length (Theta) = arccos(dot_product)
-
-                # dot product
-                dot_prod = np.dot(child_states[0], child_states[1])
-                dot_prod = np.clip(dot_prod, -1.0, 1.0)
-
-                # arc length (Geodesic Distance)
-                theta = np.arccos(dot_prod)
+                # Correction Factor: Arc^2 / Chord^2
                 arc_sq_dist = theta ** 2
 
-                # correction factor: Arc^2 / Chord^2
                 if euclidean_sq_dist > 1e-9:
                     correction_factor = arc_sq_dist / euclidean_sq_dist
                 else:
-                    # if their location is identical (euclidean_sq_dist ~= 0)
                     correction_factor = 1.0
 
-                # applying correction, enlarge it to the hypersphere
-                contrast2 = contrast2 * correction_factor
+                contrast2 = contrast_variance * correction_factor
 
+            # CASE B: Polytomy (N != 2) -> Use Projected Mean Approximation
             else:
-                # Generalized contrast for polytomies
+                # --- State Reconstruction: Projected Mean ---
+                # 1. Geometric Center in Euclidean Space
+                raw_state = np.average(child_states, axis=0, weights=weights)
+
+                # 2. Project back to Hypersphere
+                current_norm = np.linalg.norm(raw_state)
+                if current_norm > 1e-9:
+                    node.state = raw_state / current_norm
+                else:
+                    node.state = raw_state
+
+                # --- Contrast Calculation: Generalized & Corrected ---
                 contrast2 = np.zeros_like(node.state)
-                sum_inv_weights = 0
 
                 for idx, state in enumerate(child_states):
                     weight = weights[idx]
 
-                    # euclidean difference vector
+                    # Euclidean difference vector relative to the approximated ancestor
                     diff_vec = state - node.state
                     eu_dist_sq = np.sum(diff_vec ** 2)
 
-                    # chord length ^ 2
+                    # Geodesic distance (Arc length)
                     dp = np.dot(state, node.state)
                     dp = np.clip(dp, -1.0, 1.0)
                     arc_dist_sq = np.arccos(dp) ** 2
 
-                    # correction factor
+                    # Correction Factor
                     factor = 1.0
                     if eu_dist_sq > 1e-9:
                         factor = arc_dist_sq / eu_dist_sq
 
+                    # Accumulate weighted, geometrically corrected variance
                     contrast2 += weight * (diff_vec ** 2) * factor
 
             # if sorted(contrast2.tolist(), reverse=True)[0] > 5:
