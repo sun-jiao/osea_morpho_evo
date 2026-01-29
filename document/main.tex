@@ -75,7 +75,9 @@ Traditionally, analyses of morphological evolution have involved
 subjective elements, as even quantitative analyses based on
 morphological traits require human intervention in the selection and
 coding of these traits \parencite{Guillerme2020Disparities}.
-This subjectivity can introduce biases, affecting the accuracy and
+Additionally, many features, like complex feather textures exhibited
+in many taxa, are hard to measure and encode in traditional morphometrics.
+These issues can introduce biases, affecting the accuracy and
 reliability of evolutionary interpretations.
 
 To address these limitations, our research employs advanced deep
@@ -87,15 +89,17 @@ CNN image classification models, we can leverage the learned weights
 as indicators of morphological traits of various species, providing a
 more objective basis for understanding biological evolution.
 
-In our study, we trained a model capable of recognising over 10,000
+In our study, we attempted to use CNNs as a high-throughput, high-dimensional
+morphometry tool capable of capturing holistic visual features, including colour,
+texture, and body plan. We trained a model being able to recognise over 10,000
 species of birds, based on ResNet34 architecture \parencite{He2016ResNet},
 and calculated the cosine similarity between species using the weights
 extracted from the last fully connected layer (fc). This methodology
-enabled us to perform hierarchical clustering based on the cosine
-similarities, yielding insights into the morphological evolution of
-avian species. Furthermore, we utilise spherical vector variance to
-assess the morphological disparity among families and orders,
-as well as the phenotypic evolutionary history of birds.
+enabled us to perform phenotypic disparity and macroevolutionary analysis,
+yielding insights into the morphological evolution of birds.
+
+To avoid being confused with the taxonomic level "class," the term "category"
+is used as an alternative to the classes of neural networks.
 
 \section{Material \& Methods}\label{sec:masterial-methods}
 
@@ -111,7 +115,7 @@ necessitating a comprehensive data cleaning process.
 
 For the deduplication, we employed the pHash method to detect near-duplicate images
 by comparing these hashes \parencite{Farid2021Overview}. Duplicates spanning multiple
-categories are completely removed, and for intracategory duplicates, only one copy is 
+categories are completely removed, and for intracategory duplicates, only one copy is
 retained in its category.
 
 To address erroneous images with non-avian subjects, we utilised the pretrained Faster
@@ -216,111 +220,7 @@ Since we do not find an available R or Python bioinformatics package capable of 
 spherical ancestral state reconstruction (ASR), we implement it in Python based on the
 following algorithm.
 
-\begin{figure}[htbp]
-  \centering
-  \begin{minipage}{0.45\textwidth}
-    \centering
-\begin{tikzpicture}[>=Stealth, thick, scale=1.0]
-
-    % 1. Define Coordinates
-    \coordinate (O) at (0,0);
-    \coordinate (A_dir) at (100:6); % Direction of Va
-    \coordinate (B_dir) at (10:6);  % Direction of Vb
-
-    % Define the main radius
-    \def\R{5}
-    \coordinate (A) at (100:\R);
-    \coordinate (B) at (10:\R);
-
-    % Define P at an interpolated angle
-    % Let's assume t is roughly 0.4 for visual similarity
-    \coordinate (P) at (55:\R);
-
-    % 2. Calculate Intersections for Parallelogram
-    % We need A' on OA such that PA' // OB
-    % We need B' on OB such that PB' // OA
-
-    % Path for OA and OB
-    \path[name path=rayOA] (O) -- (A_dir);
-    \path[name path=rayOB] (O) -- (B_dir);
-
-    % Path from P parallel to OB (to find A')
-    \path[name path=lineFromP_parOB] (P) -- ++($(O)-(B_dir)$) -- ++($(B_dir)-(O)$);
-
-    % Path from P parallel to OA (to find B')
-    \path[name path=lineFromP_parOA] (P) -- ++($(O)-(A_dir)$) -- ++($(A_dir)-(O)$);
-
-    % Find intersections
-    \path [name intersections={of=rayOA and lineFromP_parOB, by=A_prime}];
-    \path [name intersections={of=rayOB and lineFromP_parOA, by=B_prime}];
-
-    % 3. Draw Geometry
-
-    % Draw the main arc
-    \draw (A) arc (100:10:\R);
-
-    % Draw Vectors OA, OB, OP
-    \draw[->] (O) -- (A) node[below left] {$\mathbf{v}_a$};
-    \draw[->] (O) -- (B) node[below left] {$\mathbf{v}_b$};
-    \draw[->] (O) -- (P) node[below left, xshift=-6pt, yshift=-2pt] {$\mathbf{v}_p$};
-
-    % Draw Components (A' and B')
-    % Vectors Va' and Vb' lie on the axes
-    \draw[->, ultra thick, blue!80!black] (O) -- (A_prime) node[midway, left] {$\mathbf{v}_a'$};
-    \draw[->, ultra thick, blue!80!black] (O) -- (B_prime) node[midway, below] {$\mathbf{v}_b'$};
-
-    % Draw Dashed Parallel Lines
-    \draw[dashed] (P) -- (A_prime);
-    \draw[dashed] (P) -- (B_prime);
-
-    % 4. Labels and Angles
-
-    % Points labels
-    \node[left] at (A_prime) {$A'$};
-    \node[above right] at (B_prime) {$B'$};
-    \node[above] at (A) {$A$};
-    \node[right] at (B) {$B$};
-    \node[above right] at (P) {$P$};
-
-    % Angle arcs
-
-    % Angle (1-t)theta between OA and OP
-    \pic [draw, angle radius=1.0cm, pic text={$(1-t)\theta$}, angle eccentricity=1.6, font=\footnotesize] {angle = P--O--A};
-
-    % Angle t*theta between OP and OB
-    \pic [draw, angle radius=0.8cm, pic text={$t\theta$}, angle eccentricity=1.6, font=\footnotesize] {angle = B--O--P};
-
-    % Internal angles (pi - theta) at A' and B'
-    % Using small arcs inside the parallelogram
-    \pic [draw, angle radius=0.6cm, pic text={$\pi-\theta$}, angle eccentricity=1.8, font=\footnotesize] {angle = O--A_prime--P};
-    \pic [draw, angle radius=0.6cm, pic text={$\pi-\theta$}, angle eccentricity=1.8, font=\footnotesize] {angle = P--B_prime--O};
-
-    % Angle t*theta at P (alternate interior) - optional based on diagram complexity
-    % \pic [draw, angle radius=1.0cm, "$t\theta$"] {angle = A_prime--P--O};
-
-\end{tikzpicture}
-  \end{minipage}
-  \hfill
-  \begin{minipage}{0.45\textwidth}
-    \centering
-      \begin{tikzpicture}[scale=2,every node/.style={font=\small},line width=0.8pt]
-    \coordinate (Root) at (0,0);
-    \coordinate (Internal) at (0, -0.3);
-    \coordinate (A) at (-0.5, -2);
-    \coordinate (B) at (0.5, -2);
-
-    \draw (Root) -- (Internal);
-    \draw (Internal) -| (A) node[pos=0.7, left] {$l_a$};
-    \draw (Internal) -| (B) node[pos=0.7, right] {$l_b$};
-
-    \node[below] at (A) {A};
-    \node[below] at (B) {B};
-    \node[above right] at (Internal) {P};
-\end{tikzpicture}
-  \end{minipage}
-  \caption{}
-\label{fig:algorithm-asr}
-\end{figure}
+\input{algorithm-asr-figure}
 
 In a post-order traversal of the phylogenetic tree, for a selected pair
 of sister nodes (sister groups), let $\mathbf{v}_a, \mathbf{v}_b$
@@ -354,98 +254,42 @@ via the following steps \cref{fig:algorithm-asr}:
     where $N$ is the numbers of leaf nodes (species).
 \end{enumerate}
 
-Then, we conduct 100 times of null simulations in preorder traversals according to the following algorithm (\cref{fig:algorithm-brownian-notion}):
+Once the whole ASR process is finished, the spherical variance for every time slice (1 ma) is calculated
+on the whole timetree, which represents the phenotypic disparity of all birds at the specific time.
+Then, we conduct 100 times of null simulations in preorder traversals.
+For every internal node, the feature vectors of its children are calculated
+according to the following algorithm (\cref{fig:algorithm-bm}):
 
 \begin{enumerate}
-    \item Create a random noise in the Euclidean space following this multivariate normal distribution:
+    \item Create a Gaussian noise $\mathbf{v}_{x}$ in the Euclidean space following this multivariate normal distribution:
     \begin{equation}
-        \mathbf{v}_{X} \sim \mathcal{N}(\mathbf{0}, \hat{\sigma}^2 t \mathbf{I}_D)
+        \mathbf{v}_{x} \sim \mathcal{N}(\mathbf{0}, \hat{\sigma}^2 t \mathbf{I}_D)
     \end{equation}
+    where $t$ is the evolution time (branch length) of the child node.
+    \item Project $\mathbf{v}_{x}$ onto the tangent space of the hypersphere:
+    \begin{equation}
+        a = \mathbf{v}_{p} \cdot \mathbf{v}_{x}
+    \end{equation}
+    \begin{equation}
+        \mathbf{v}_{t} = \mathbf{v}_{x} - a \mathbf{v}_{p}
+    \end{equation}
+    \item Move on the hypersphere following a great circle, the direction and geodesic distance is same as the direction and the norm of $\mathbf{v}_{t}$:
+    \begin{equation}
+        \theta = ||\mathbf{v}_{t}||
+    \end{equation}
+    \begin{equation}
+        \mathbf{v}_{c} = \cos{\theta}~\mathbf{v}_{p} + \frac{\sin{\theta}}{||\mathbf{v}_{t}||} \mathbf{v}_{t}
+    \end{equation}
+    and $\mathbf{v}_{c}$ is the simulated feature vector of the child species.
 \end{enumerate}
 
-\begin{figure}[htbp]
-    \centering
-\begin{tikzpicture}[>=Stealth, thick, scale=1.0]
+\input{algorithm-bm-figure}
 
-    % --- CONFIGURATION ---
-    \def\R{6}          % Radius of the sphere (length of vp)
-    \def\angTheta{45}  % Angle theta
-    \def\angAlpha{65}  % Angle of vx relative to vertical
-    \def\lenVx{4.5}    % Length of vx vector
-
-    % Coordinates
-    \coordinate (Origin) at (0,0);           % The "North Pole" (Tangent point)
-    \coordinate (Center) at (0, -\R);        % The Center of the sphere
-
-    % --- AXES ---
-    % Vertical dashed axis (upwards)
-    \draw[dashed, thick] (0, 0) -- (0, 2.5);
-
-    % Horizontal dashed axis (Tangent Space)
-    \draw[dashed, thick] (-2, 0) -- (7, 0) node[right] {tangent space};
-
-
-    % --- TOP PART: PROJECTION ---
-
-    % Vector vx
-    \coordinate (Vx) at (\angAlpha:\lenVx); % Defined by angle alpha
-    % Note: In the image, vx is (x,y). Let's approximate the slope visually.
-    \coordinate (Vx_End) at (5, 2);
-    \draw[->, ultra thick] (Origin) -- (Vx_End) node[midway, above left] {$\mathrm{v_x}$};
-
-    % Vector vt (Projection on horizontal)
-    \coordinate (Vt_End) at (5, 0);
-    \draw[->, ultra thick] (Origin) -- (Vt_End) node[midway, above] {$\mathrm{v_t}$};
-
-    % Projection line 'a'
-    \draw[dashed, thick] (Vx_End) -- (Vt_End) node[midway, right] {$\mathrm{a}$};
-
-    % Angle Alpha
-    \coordinate (Y_Axis_Point) at (0, 2);
-    \pic [draw, pic text=$\alpha$, angle radius=0.8cm, angle eccentricity=1.3] {angle = Vx_End--Origin--Y_Axis_Point};
-
-
-    % --- BOTTOM PART: GEODESIC UPDATE ---
-
-    % Calculate the "Child" point on the sphere surface
-    % x = R * sin(theta)
-    % y = -R + R * cos(theta) (relative to origin)
-    % But we draw from Center (0, -R).
-    % Target point S relative to Center is (R sin theta, R cos theta).
-
-    \coordinate (S) at ({\R*sin(\angTheta)}, {-\R + \R*cos(\angTheta)});
-    \coordinate (M) at (0, {-\R + \R*cos(\angTheta)}); % The corner of the triangle
-
-    % 1. Vertical Component (vp * cos theta)
-    % Draws from Center to M
-    \draw[->, ultra thick] (Center) -- (M) node[midway, left=5pt] {$\mathrm{v_p} \cdot \cos\theta$};
-
-    % 2. Horizontal Component (vt/|vt| * sin theta)
-    % Draws from M to S
-    \draw[->, ultra thick] (M) -- (S) node[midway, above] {$\frac{\mathrm{v_t}}{\|\mathrm{v_t}\|} \sin\theta$};
-
-    % 3. Result Vector (vc)
-    % Draws from Center to S
-    \draw[->, ultra thick] (Center) -- (S) node[midway, below right] {$\mathrm{v_c}$};
-
-    % 4. Parent Vector (vp) label logic
-    % The line goes from Center to Origin.
-    % We need an arrow head at the Origin.
-    \draw[->, ultra thick] (Center) -- (Origin); % completing the vertical line
-    \node[above=40pt, left=5pt] at (0, -2.5) {$\mathrm{v_p}$}; % Label roughly in the middle of the top section
-
-    % 5. Angle Theta
-    \pic [draw, pic text=$\theta$, angle radius=1.0cm, angle eccentricity=1.3] {angle = S--Center--M};
-
-    % 6. The Geodesic Arc
-    % Arcs from Origin (top) down to S.
-    % To draw an arc in TikZ, we specify start angle, end angle, and radius.
-    % Start: 90 degrees (relative to Center). End: 90 - theta.
-    \draw[thick] (0,0) arc (90:{90-\angTheta}:\R);
-\end{tikzpicture}
-  \caption{}
-\label{fig:algorithm-brownian-notion}
-\end{figure}
+When the whole traversal is finished, the ASR is conducted based on the simulated
+feature vectors of all modern species (leaf nodes) following the aforementioned algorithm,
+as well as the spherical variance for every time slice. Finally, the empirical disparity
+through time result and the mean disparity through time of all 100 times of null simulations
+are visualised and compared from evolutionary biological perspective.
 
 \section{Result}\label{sec:result}
 
@@ -522,9 +366,8 @@ Caprimulgiformes, Procellariiformes, Apterygiformes, Struthioniformes, and Psitt
   \caption{Comparison of models of the phenotypic disparity of taxa (orders or famalies) as a
   function of diversity. Showing scatter plot of all taxa, graphs of four models, names of
   the five taxa with the highest and the five with the lowest phenotypic disparity.}
-  \label{subfig:models_comparison}
+  \label{fig:models_comparison}
 \end{figure}
-
 
 For families, the power law receives the lowest AIC (-1201.08), followed by the
 Hill equation (-1199.76), without significant difference
@@ -536,7 +379,19 @@ and Procellariidae show the lowest (\cref{subfig:models_family}).
 
 \subsection{Disparity through time}\label{subsec:r-disparity-through-time}
 
+Placeholder (\cref{fig:dtt})
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{dtt_null_test_combined}
+    \caption{Grad-CAM reveals that the network's attention is consistently
+    focused on birds, ignoring backgrounds and occlusions.}
+    \label{fig:dtt}
+\end{figure}
+
 \section{Discussion}\label{sec:discussion}
+
+Placeholder
 
 \paragraph{Code and data accessibility}
 \begin{itemize}

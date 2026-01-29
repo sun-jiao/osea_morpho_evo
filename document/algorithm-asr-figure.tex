@@ -1,0 +1,105 @@
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \begin{tikzpicture}[>=Stealth, thick, scale=0.9]
+
+            % 1. Define Coordinates
+            \coordinate (O) at (0,0);
+            \coordinate (A_dir) at (100:6); % Direction of Va
+            \coordinate (B_dir) at (10:6);  % Direction of Vb
+
+            % Define the main radius
+            \def\R{5}
+            \coordinate (A) at (100:\R);
+            \coordinate (B) at (10:\R);
+
+            % Define P at an interpolated angle
+            % Let's assume t is roughly 0.4 for visual similarity
+            \coordinate (P) at (55:\R);
+
+            % 2. Calculate Intersections for Parallelogram
+            % We need A' on OA such that PA' // OB
+            % We need B' on OB such that PB' // OA
+
+            % Path for OA and OB
+            \path[name path=rayOA] (O) -- (A_dir);
+            \path[name path=rayOB] (O) -- (B_dir);
+
+            % Path from P parallel to OB (to find A')
+            \path[name path=lineFromP_parOB] (P) -- ++($(O)-(B_dir)$) -- ++($(B_dir)-(O)$);
+
+            % Path from P parallel to OA (to find B')
+            \path[name path=lineFromP_parOA] (P) -- ++($(O)-(A_dir)$) -- ++($(A_dir)-(O)$);
+
+            % Find intersections
+            \path [name intersections={of=rayOA and lineFromP_parOB, by=A_prime}];
+            \path [name intersections={of=rayOB and lineFromP_parOA, by=B_prime}];
+
+            % 3. Draw Geometry
+
+            % Draw the main arc
+            \draw (A) arc (100:10:\R);
+
+            % Draw Vectors OA, OB, OP
+            \draw[->] (O) -- (A) node[below left] {$\mathbf{v}_a$};
+            \draw[->] (O) -- (B) node[below left] {$\mathbf{v}_b$};
+            \draw[->] (O) -- (P) node[below left, xshift=-6pt, yshift=-2pt] {$\mathbf{v}_p$};
+
+            % Draw Components (A' and B')
+            % Vectors Va' and Vb' lie on the axes
+            \draw[->, ultra thick, blue!80!black] (O) -- (A_prime) node[midway, left] {$\mathbf{v}_a'$};
+            \draw[->, ultra thick, blue!80!black] (O) -- (B_prime) node[midway, below] {$\mathbf{v}_b'$};
+
+            % Draw Dashed Parallel Lines
+            \draw[dashed] (P) -- (A_prime);
+            \draw[dashed] (P) -- (B_prime);
+
+            % 4. Labels and Angles
+
+            % Points labels
+            \node[left] at (A_prime) {$A'$};
+            \node[above right] at (B_prime) {$B'$};
+            \node[above] at (A) {$A$};
+            \node[right] at (B) {$B$};
+            \node[above right] at (P) {$P$};
+
+            % Angle arcs
+
+            % Angle (1-t)theta between OA and OP
+            \pic [draw, angle radius=1.0cm, pic text={$(1-t)\theta$}, angle eccentricity=1.6, font=\footnotesize] {angle = P--O--A};
+
+            % Angle t*theta between OP and OB
+            \pic [draw, angle radius=0.8cm, pic text={$t\theta$}, angle eccentricity=1.6, font=\footnotesize] {angle = B--O--P};
+
+            % Internal angles (pi - theta) at A' and B'
+            % Using small arcs inside the parallelogram
+            \pic [draw, angle radius=0.6cm, pic text={$\pi-\theta$}, angle eccentricity=1.8, font=\footnotesize] {angle = O--A_prime--P};
+            \pic [draw, angle radius=0.6cm, pic text={$\pi-\theta$}, angle eccentricity=1.8, font=\footnotesize] {angle = P--B_prime--O};
+
+            % Angle t*theta at P (alternate interior) - optional based on diagram complexity
+            % \pic [draw, angle radius=1.0cm, "$t\theta$"] {angle = A_prime--P--O};
+
+        \end{tikzpicture}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \begin{tikzpicture}[scale=2,every node/.style={font=\small},line width=0.8pt]
+    \coordinate (Root) at (0,0);
+    \coordinate (Internal) at (0, -0.3);
+    \coordinate (A) at (-0.5, -2);
+    \coordinate (B) at (0.5, -2);
+
+    \draw (Root) -- (Internal);
+    \draw (Internal) -| (A) node[pos=0.7, left] {$l_a$};
+    \draw (Internal) -| (B) node[pos=0.7, right] {$l_b$};
+
+    \node[below] at (A) {A};
+    \node[below] at (B) {B};
+    \node[above right] at (Internal) {P};
+        \end{tikzpicture}
+    \end{minipage}
+    \caption{Geometric diagram of the ancestor state reconstruction algorithm. }
+    \label{fig:algorithm-asr}
+\end{figure}
