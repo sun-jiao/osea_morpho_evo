@@ -377,7 +377,26 @@ def interpolate_state(p_state, c_state, p_age, c_age, t):
     if c_age == p_age:
         return p_state
     frac = (t - p_age) / (c_age - p_age)
-    return p_state + frac * (c_state - p_state)
+
+    dot_prod = np.dot(p_state, c_state)
+    dot_prod = np.clip(dot_prod, -1.0, 1.0)
+    theta = np.arccos(dot_prod)
+
+    if theta < 1e-9:
+        return p_state
+    else:
+        sin_theta = np.sin(theta)
+        coeff_a = np.sin((1 - frac) * theta) / sin_theta
+        coeff_b = np.sin(frac * theta) / sin_theta
+
+        result = coeff_a * p_state + coeff_b * c_state
+
+        # Re-normalize to ensure numerical stability on the manifold
+        # (SLERP theoretically stays on sphere, but float errors accumulate)
+        result = result / np.linalg.norm(result)
+        result /= np.linalg.norm(result)
+
+        return result
 
 
 def compute_variance(vectors):
