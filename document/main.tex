@@ -1,0 +1,559 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath}
+\usepackage[backend=biber,style=apa,sorting=nyt]{biblatex}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{csquotes}
+\usepackage{lineno}
+\usepackage{amsopn}
+\usepackage{orcidlink}
+\usepackage{authblk}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{textcomp}
+\usepackage{tikz}
+\usetikzlibrary{calc, angles, quotes, intersections, arrows.meta, decorations.markings, decorations.pathreplacing}
+\geometry{left=3cm, right=3cm, top=3cm, bottom=3cm}
+\MakeOuterQuote{"}
+\addbibresource{references.bib}
+\DeclareNameAlias{sortname}{family-given}
+\DeclareNameAlias{default}{family-given}
+\nolinenumbers
+
+\title{Deep-learning-based pan-phenomic data reveals the explosive evolution of avian visual disparity}
+
+\author[1,2]{Jiao Sun\orcidlink{0000-0002-5028-8132}}
+\affil[1]{Division of Ecology and Evolutionary Biology, School of Biological Science,
+    University of Reading, Whiteknights, Reading, RG6 6EX, United Kingdom}
+\affil[2]{CAS Key Laboratory of Plant Germplasm Enhancement and Specialty Agriculture,
+    Wuhan Botanical Garden, Chinese Academy of Sciences, Wuhan 430074, China}
+\affil[ ]{\url{j.sun@pgr.reading.ac.uk}}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+The evolution of biological morphology is critical for understanding the
+diversity of the natural world, yet traditional analyses often
+involve subjective biases in the selection and coding of
+morphological traits. This study employs deep learning techniques,
+utilising a pretrained ResNet34 model capable of recognising over
+10,000 bird species, to explore avian morphological evolution. We
+extracted weights from the model's final fully connected (fc) layer
+to create vector representations of avian species and assessed their
+similarities using cosine similarity metrics. The results
+demonstrated multiple clustering patterns with or without biological
+meaning. Some clustering results are consistent with traditional
+classifications based on morphology, some are consistent with modern
+cladistic classifications, and some show behavioural and ecological
+similarities. We utilise the spherical variance of vectors
+to assess the morphological disparity among various taxa and
+evaluated the association between morphological disparity and species richness.
+The result showed  Despite these insights, some clusters indicated
+the influence of non-biological image features on clustering
+outcomes. This study underscores the potential and limitations of
+using deep learning approaches in morphological evolution studies.
+\end{abstract}
+
+\addcontentsline{toc}{section}{Abstract}
+
+\paragraph{Keywords} bird biodiversity, deep learning, morphological evolution
+
+\section{Introduction}\label{sec:introduction}
+
+The evolution of biological morphology plays a crucial role in shaping
+the diverse natural world we observe today. It provides insight into
+the adaptation and survival of species over time, influencing various
+ecological interactions and the functioning of ecosystems.
+Traditionally, analyses of morphological evolution have involved
+subjective elements, as even quantitative analyses based on
+morphological traits require human intervention in the selection and
+coding of these traits \parencite{Guillerme2020Disparities}.
+This subjectivity can introduce biases, affecting the accuracy and
+reliability of evolutionary interpretations.
+
+To address these limitations, our research employs advanced deep
+learning technologies, specifically Convolutional Neural Networks
+(CNNs). CNNs, popularised by \textcite{LeCun1989Backpropagation},
+are designed to automatically learn visual features from image data,
+making them exceptionally suited for visual recognition tasks. By utilising
+CNN image classification models, we can leverage the learned weights
+as indicators of morphological traits of various species, providing a
+more objective basis for understanding biological evolution.
+
+In our study, we trained a model capable of recognising over 10,000
+species of birds, based on ResNet34 architecture \parencite{He2016ResNet},
+and calculated the cosine similarity between species using the weights
+extracted from the last fully connected layer (fc). This methodology
+enabled us to perform hierarchical clustering based on the cosine
+similarities, yielding insights into the morphological evolution of
+avian species. Furthermore, we utilise spherical vector variance to
+assess the morphological disparity among families and orders,
+as well as the phenotypic evolutionary history of birds.
+
+\section{Material \& Methods}\label{sec:masterial-methods}
+
+\subsection{Data processing}\label{subsec:mm-data-processing}
+
+In this study, we utilised the DongNiao International Birds 10000 Dataset (DIB-10K)
+by \textcite{Mei2020Dongniao}, which comprises over 4.8 million images representing
+10,922 bird species, following the IOC 10.1 taxonomy \parencite{Gill2021IOC}. This
+extensive dataset encompasses a wide variety of bird species, morphological variants,
+postures, and gestures \parencite{Mei2020Dongniao}. Despite their efforts in manual
+review and correction, the dataset contains numerous duplicate and erroneous images,
+necessitating a comprehensive data cleaning process.
+
+For the deduplication, we employed the pHash method to detect near-duplicate images
+by comparing these hashes \parencite{Farid2021Overview}. Duplicates spanning multiple
+categories are completely removed, and for intracategory duplicates, only one copy is 
+retained in its category.
+
+To address erroneous images with non-avian subjects, we utilised the pretrained Faster
+Region-based Convolutional Neural Network (Faster R-CNN,~\cite{Ren2017Faster}) in
+the torchvision library \parencite{Ansel2024Pytorch}. For images where no birds were
+detected, we implemented a two-tiered approach: images from high-volume categories
+($\geq200$ images) were automatically deleted, while those from low-volume categories
+($<200$ images) were moved to a separate directory for manual inspection.
+After a manual thorough review, valid images were reintegrated into the dataset.
+
+\subsection{Model training}\label{subsec:mm-model-training}
+
+The task of recognising over 10,000 bird species is a
+fine-grained visual categorisation (FGVC) problem, where the goal is
+to identify minor differences between highly similar categories. To
+tackle this challenge, we adopted the MetaFGNet model proposed by \textcite{Zhang2018Fine},
+which is specifically designed for FGVC tasks. We utilised their
+pretrained weights "LBird-31\_checkpoint" as the foundation for
+transfer learning on the processed DIB-10K dataset.
+
+For the training process, we employed a server equipped with an RTX 4090D
+GPU, 90GB of memory, and a 15-core
+Intel\textsuperscript{\textregistered} Xeon\textsuperscript{\textregistered}
+Platinum 8474C processor from the \href{https://www.autodl.com/docs/}{AutoDL platform}.
+This high-performance setup allowed for efficient processing and model training.
+The training procedure was conducted for 32 epochs.
+
+We reassigned the orders and families of all species (categories) to align with the
+IOC 15.1 \parencite{Gill2025IOC}. The weights are extracted from the final fully
+connected layer (fc) of the ResNet34 model. Weights of each species were regarded as a
+512-dimensional vector representing the morphological traits. They are reduced to the
+lowest boundary that can explain 80\% of all variances for subsequent analyses.
+Gradient-weighted Class Activation Mapping (Grad-CAM,~\cite{Selvaraju2020Grad}) is
+employed to visualise
+
+\subsection{Similarity clustering}\label{subsec:mm-similarity-clustering}
+
+Species similarity was quantified using cosine similarity, implemented via
+dot product calculation of $L_2$-normalised vectors in PyTorch \parencite{Ansel2024Pytorch}.
+Next, we conducted agglomerative hierarchical clustering using the average
+linkage method to merge clusters. This was executed with the
+hierarchical clustering functionalities implemented in the SciPy
+library \parencite{Gommers2025Scipy}. The hierarchical structure of the
+clusters was output in Newick format, a widely used format in
+computational biology for tree structures. Finally, we utilised ETE3
+to export the clustering dendrogram in SVG format \parencite{Huerta2016ETE}.
+
+To analysing the clustering result, we applied a recursive top-down
+analysis to the tree, evaluating each internal node for taxonomic
+"purity." For a given node, we defined taxonomic purity as
+the proportion of the majority taxon. A node with a taxonomic
+purity of more than 85\% was considered taxonomically consistent. For
+taxonomically consistent nodes, all of their child nodes were
+excluded from further checks. For such nodes, we further examined
+all species to identify and annotate taxonomical outliers, which belong
+to taxa that different from the majority taxon of this branch.
+Finally, we conducted manual review to confirm whether outliers had
+biological similarity with the majority taxa of their branches and
+what kinds of similarity do they have. The above pipeline was carried
+out in both order-level and family-level.
+
+\subsection{Disparity analysis}\label{subsec:mm-disparity-analysis}
+
+Before proceeding with this analysis, we removed 122 species whose weight
+vectors were identified as lacking biological significance during the
+manual review process. The specific reasons are detailed in the
+discussion section.
+
+Spherical vector variance of all species was used to assess the morphological
+disparity among taxa. The Spearman's rank correlation was employed to examine
+the relationship between diversity (species richness) and
+morphological disparity (spherical variance). The Akaike
+information criterion (AIC) was employed to assess and compare four models:
+
+\begin{enumerate}
+    \item Power law: $f(x) = 1 - x^b$, the coefficient of $x^b$
+        is fixed as 1 to satisfy the boundary condition $f(1) = 0$,
+        reflecting the theoretical expectation;
+    \item Stretched exponential model: $f(x) = 1 - \exp(-\lambda \cdot (x - 1)^\beta)$;
+    \item Hill equation: $f(x) = \frac{(x - 1)^n}{k + (x - 1)^n}$;
+    \item Logarithmic rational model: $f(x) = \frac{\ln(x)}{k + \ln(x)}$.
+\end{enumerate}
+
+Both analyses were conducted at both order and family levels. Subsequently, the residuals
+of the disparity of every taxon are calculated, five taxa with the highest and five with
+the lowest residuals are listed.
+
+\subsection{Disparity through time}\label{subsec:mm-disparity-through-time}
+
+In classical phylogenetic independent contrast (PIC) proposed by
+\textcite{Felsenstein1985PIC}, The evolution of phenotypic traits
+follows a Brownian motion model in Euclidean space, in which the trait of each descendant
+is derived from the trait of the ancestral species through a random walk in Euclidean space.
+The time of this walk is proportional to the divergence time, which is the branch length of
+the evolutionary tree.
+
+As demonstrated by \textcite{Wang2017NormFace}, in the last fully connected layer of CNNs,
+the semantic information is primarily encoded in the angular direction, which is equivalent
+to $L_2$ normalised vectors. Therefore, we assume that the feature vectors randomly walk on
+a unit hypersphere, following a Riemannian Brownian motion.
+Since we do not find an available R or Python bioinformatics package capable of calculating
+spherical ancestral state reconstruction (ASR), we implement it in Python based on the
+following algorithm.
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}{0.45\textwidth}
+    \centering
+\begin{tikzpicture}[>=Stealth, thick, scale=1.0]
+
+    % 1. Define Coordinates
+    \coordinate (O) at (0,0);
+    \coordinate (A_dir) at (100:6); % Direction of Va
+    \coordinate (B_dir) at (10:6);  % Direction of Vb
+
+    % Define the main radius
+    \def\R{5}
+    \coordinate (A) at (100:\R);
+    \coordinate (B) at (10:\R);
+
+    % Define P at an interpolated angle
+    % Let's assume t is roughly 0.4 for visual similarity
+    \coordinate (P) at (55:\R);
+
+    % 2. Calculate Intersections for Parallelogram
+    % We need A' on OA such that PA' // OB
+    % We need B' on OB such that PB' // OA
+
+    % Path for OA and OB
+    \path[name path=rayOA] (O) -- (A_dir);
+    \path[name path=rayOB] (O) -- (B_dir);
+
+    % Path from P parallel to OB (to find A')
+    \path[name path=lineFromP_parOB] (P) -- ++($(O)-(B_dir)$) -- ++($(B_dir)-(O)$);
+
+    % Path from P parallel to OA (to find B')
+    \path[name path=lineFromP_parOA] (P) -- ++($(O)-(A_dir)$) -- ++($(A_dir)-(O)$);
+
+    % Find intersections
+    \path [name intersections={of=rayOA and lineFromP_parOB, by=A_prime}];
+    \path [name intersections={of=rayOB and lineFromP_parOA, by=B_prime}];
+
+    % 3. Draw Geometry
+
+    % Draw the main arc
+    \draw (A) arc (100:10:\R);
+
+    % Draw Vectors OA, OB, OP
+    \draw[->] (O) -- (A) node[below left] {$\mathbf{v}_a$};
+    \draw[->] (O) -- (B) node[below left] {$\mathbf{v}_b$};
+    \draw[->] (O) -- (P) node[below left, xshift=-6pt, yshift=-2pt] {$\mathbf{v}_p$};
+
+    % Draw Components (A' and B')
+    % Vectors Va' and Vb' lie on the axes
+    \draw[->, ultra thick, blue!80!black] (O) -- (A_prime) node[midway, left] {$\mathbf{v}_a'$};
+    \draw[->, ultra thick, blue!80!black] (O) -- (B_prime) node[midway, below] {$\mathbf{v}_b'$};
+
+    % Draw Dashed Parallel Lines
+    \draw[dashed] (P) -- (A_prime);
+    \draw[dashed] (P) -- (B_prime);
+
+    % 4. Labels and Angles
+
+    % Points labels
+    \node[left] at (A_prime) {$A'$};
+    \node[above right] at (B_prime) {$B'$};
+    \node[above] at (A) {$A$};
+    \node[right] at (B) {$B$};
+    \node[above right] at (P) {$P$};
+
+    % Angle arcs
+
+    % Angle (1-t)theta between OA and OP
+    \pic [draw, angle radius=1.0cm, pic text={$(1-t)\theta$}, angle eccentricity=1.6, font=\footnotesize] {angle = P--O--A};
+
+    % Angle t*theta between OP and OB
+    \pic [draw, angle radius=0.8cm, pic text={$t\theta$}, angle eccentricity=1.6, font=\footnotesize] {angle = B--O--P};
+
+    % Internal angles (pi - theta) at A' and B'
+    % Using small arcs inside the parallelogram
+    \pic [draw, angle radius=0.6cm, pic text={$\pi-\theta$}, angle eccentricity=1.8, font=\footnotesize] {angle = O--A_prime--P};
+    \pic [draw, angle radius=0.6cm, pic text={$\pi-\theta$}, angle eccentricity=1.8, font=\footnotesize] {angle = P--B_prime--O};
+
+    % Angle t*theta at P (alternate interior) - optional based on diagram complexity
+    % \pic [draw, angle radius=1.0cm, "$t\theta$"] {angle = A_prime--P--O};
+
+\end{tikzpicture}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.45\textwidth}
+    \centering
+      \begin{tikzpicture}[scale=2,every node/.style={font=\small},line width=0.8pt]
+    \coordinate (Root) at (0,0);
+    \coordinate (Internal) at (0, -0.3);
+    \coordinate (A) at (-0.5, -2);
+    \coordinate (B) at (0.5, -2);
+
+    \draw (Root) -- (Internal);
+    \draw (Internal) -| (A) node[pos=0.7, left] {$l_a$};
+    \draw (Internal) -| (B) node[pos=0.7, right] {$l_b$};
+
+    \node[below] at (A) {A};
+    \node[below] at (B) {B};
+    \node[above right] at (Internal) {P};
+\end{tikzpicture}
+  \end{minipage}
+  \caption{}
+\label{fig:algorithm-asr}
+\end{figure}
+
+In a post-order traversal of the phylogenetic tree, for a selected pair
+of sister nodes (sister groups), let $\mathbf{v}_a, \mathbf{v}_b$
+be the state vectors of them on a unit sphere, and $l_a, l_b$ be their branch
+lengths (for leaf nodes) or the equivalent branch lengths (for internal nodes)
+on a timetree. The ancestral state and the contrast is computed
+via the following steps \cref{fig:algorithm-asr}:
+
+\begin{enumerate}
+    \item We firstly calculate their geodesic distance, which is equivalent to their included angle
+            for $L_2$ normalised vectors:
+    \begin{equation}
+        \theta = \arccos{(\mathbf{v}_a\cdot\mathbf{v}_b)}
+    \end{equation}
+
+    \item The parent state $\mathbf{v}_p$ is inferred by interpolating along the geodesic arc:
+    \begin{equation}
+        \mathbf{v}_p = \frac{\sin((1-t)\theta)}{\sin\theta}\mathbf{v}_a + \frac{\sin(t\theta)}{\sin\theta}\mathbf{v}_b
+    \end{equation}
+    where $t = l_b / (l_a + l_b)$.
+
+    \item To adjust for the curvature of the state space, the contrast variance is scaled by the ratio of the squared arc length to the squared chord length:
+    \begin{equation}
+        \text{Contrast}^2 = \frac{\theta^2}{l_1 + l_2} = \underbrace{\frac{||\mathbf{v}_1 - \mathbf{v}_2||^2}{l_1 + l_2}}_{\text{Euclidean Variance}} \times \underbrace{\frac{\theta^2}{||\mathbf{v}_1 - \mathbf{v}_2||^2}}_{\text{Correction Factor}}
+    \end{equation}
+
+    \item When the traversal is completed, the estimated evolutionary rate of the whole tree is:
+    \begin{equation}
+        \hat{\sigma}^2 = \frac{\sum\text{Contrast}^2}{N-1}
+    \end{equation}
+    where $N$ is the numbers of leaf nodes (species).
+\end{enumerate}
+
+Then, we conduct 100 times of null simulations in preorder traversals according to the following algorithm (\cref{fig:algorithm-brownian-notion}):
+
+\begin{enumerate}
+    \item Create a random noise in the Euclidean space following this multivariate normal distribution:
+    \begin{equation}
+        \mathbf{v}_{X} \sim \mathcal{N}(\mathbf{0}, \hat{\sigma}^2 t \mathbf{I}_D)
+    \end{equation}
+\end{enumerate}
+
+\begin{figure}[htbp]
+    \centering
+\begin{tikzpicture}[>=Stealth, thick, scale=1.0]
+
+    % --- CONFIGURATION ---
+    \def\R{6}          % Radius of the sphere (length of vp)
+    \def\angTheta{45}  % Angle theta
+    \def\angAlpha{65}  % Angle of vx relative to vertical
+    \def\lenVx{4.5}    % Length of vx vector
+
+    % Coordinates
+    \coordinate (Origin) at (0,0);           % The "North Pole" (Tangent point)
+    \coordinate (Center) at (0, -\R);        % The Center of the sphere
+
+    % --- AXES ---
+    % Vertical dashed axis (upwards)
+    \draw[dashed, thick] (0, 0) -- (0, 2.5);
+
+    % Horizontal dashed axis (Tangent Space)
+    \draw[dashed, thick] (-2, 0) -- (7, 0) node[right] {tangent space};
+
+
+    % --- TOP PART: PROJECTION ---
+
+    % Vector vx
+    \coordinate (Vx) at (\angAlpha:\lenVx); % Defined by angle alpha
+    % Note: In the image, vx is (x,y). Let's approximate the slope visually.
+    \coordinate (Vx_End) at (5, 2);
+    \draw[->, ultra thick] (Origin) -- (Vx_End) node[midway, above left] {$\mathrm{v_x}$};
+
+    % Vector vt (Projection on horizontal)
+    \coordinate (Vt_End) at (5, 0);
+    \draw[->, ultra thick] (Origin) -- (Vt_End) node[midway, above] {$\mathrm{v_t}$};
+
+    % Projection line 'a'
+    \draw[dashed, thick] (Vx_End) -- (Vt_End) node[midway, right] {$\mathrm{a}$};
+
+    % Angle Alpha
+    \coordinate (Y_Axis_Point) at (0, 2);
+    \pic [draw, pic text=$\alpha$, angle radius=0.8cm, angle eccentricity=1.3] {angle = Vx_End--Origin--Y_Axis_Point};
+
+
+    % --- BOTTOM PART: GEODESIC UPDATE ---
+
+    % Calculate the "Child" point on the sphere surface
+    % x = R * sin(theta)
+    % y = -R + R * cos(theta) (relative to origin)
+    % But we draw from Center (0, -R).
+    % Target point S relative to Center is (R sin theta, R cos theta).
+
+    \coordinate (S) at ({\R*sin(\angTheta)}, {-\R + \R*cos(\angTheta)});
+    \coordinate (M) at (0, {-\R + \R*cos(\angTheta)}); % The corner of the triangle
+
+    % 1. Vertical Component (vp * cos theta)
+    % Draws from Center to M
+    \draw[->, ultra thick] (Center) -- (M) node[midway, left=5pt] {$\mathrm{v_p} \cdot \cos\theta$};
+
+    % 2. Horizontal Component (vt/|vt| * sin theta)
+    % Draws from M to S
+    \draw[->, ultra thick] (M) -- (S) node[midway, above] {$\frac{\mathrm{v_t}}{\|\mathrm{v_t}\|} \sin\theta$};
+
+    % 3. Result Vector (vc)
+    % Draws from Center to S
+    \draw[->, ultra thick] (Center) -- (S) node[midway, below right] {$\mathrm{v_c}$};
+
+    % 4. Parent Vector (vp) label logic
+    % The line goes from Center to Origin.
+    % We need an arrow head at the Origin.
+    \draw[->, ultra thick] (Center) -- (Origin); % completing the vertical line
+    \node[above=40pt, left=5pt] at (0, -2.5) {$\mathrm{v_p}$}; % Label roughly in the middle of the top section
+
+    % 5. Angle Theta
+    \pic [draw, pic text=$\theta$, angle radius=1.0cm, angle eccentricity=1.3] {angle = S--Center--M};
+
+    % 6. The Geodesic Arc
+    % Arcs from Origin (top) down to S.
+    % To draw an arc in TikZ, we specify start angle, end angle, and radius.
+    % Start: 90 degrees (relative to Center). End: 90 - theta.
+    \draw[thick] (0,0) arc (90:{90-\angTheta}:\R);
+\end{tikzpicture}
+  \caption{}
+\label{fig:algorithm-brownian-notion}
+\end{figure}
+
+\section{Result}\label{sec:result}
+
+\subsection{Model training}\label{subsec:r-model-training}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{gradcam}
+    \caption{Grad-CAM reveals that the network's attention is consistently
+    focused on birds, ignoring backgrounds and occlusions.}
+    \label{fig:gradcam}
+\end{figure}
+
+The model achieved 90.8\% accuracy on the training set and 87.6\% accuracy
+on the validation set. Grad-CAM reveals that the network's attention is focused
+on birds, effectively ignoring complex backgrounds and occlusions. The attention
+maps cover the entire bird, indicating that the extracted phenotypic vectors
+can be regarded as representations of the shape, plumage, and colour of species (\cref{fig:gradcam}).
+
+\subsection{Similarity clustering}\label{subsec:r-similarity-clustering}
+
+The clustering process results in a comprehensive hierarchical clustering output.
+The agglomerative clustering technique applied to the cosine similarity
+measures of the weight vectors yielded a dendrogram that illustrates the
+relationships between the different avian species based on their
+morphological features learned by the ResNet34 model.
+
+In the taxonomic consistence analysis, we identified a total of 391
+branches with high taxonomic consistency at the family level and 94
+branches at the order level. Additionally, we found 474 family-level
+outlier species and 533 order-level outlier species (\cref{fig:cluster}).
+
+\begin{figure}[htbp]
+  \centering
+  \begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=1.05\textwidth]{cluster-1}
+  \end{minipage}
+  \hfill
+  \begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{cluster-2}
+  \end{minipage}
+  \caption{The clustering result with high-purity branches collapsed.}
+\label{fig:cluster}
+\end{figure}
+
+\subsection{Disparity analysis}\label{subsec:r-disparity-analysis}
+
+The stretched exponential model receives the lowest AIC (-251.33) at the order
+level, followed by the Hill equation (-250.02), without significant difference
+($\Delta AIC = 1.31$). The models are respectively $f(x) = 1 - \exp(-0.1420(x - 1)^{0.3081})$
+and $f(x) = \frac{(x - 1)^{0.3973}}{7.4957 + (x - 1)^{0.3973}}$.
+Orders with the highest disparity residuals are Falconiformes, Cuculiformes,
+Pelecaniformes, Mesitornithiformes (highest first), and Piciformes.
+Caprimulgiformes, Procellariiformes, Apterygiformes, Struthioniformes, and Psittaciformes
+(lowest first, the same applies below) show the least disaprity residuals (\cref{subfig:models_order}).
+
+\begin{figure}[htbp]
+  \centering
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{model_comparison_order}
+    \caption{}
+    \label{subfig:models_order}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{model_comparison_family}
+    \caption{}
+    \label{subfig:models_family}
+  \end{subfigure}
+  \caption{Comparison of models of the phenotypic disparity of taxa (orders or famalies) as a
+  function of diversity. Showing scatter plot of all taxa, graphs of four models, names of
+  the five taxa with the highest and the five with the lowest phenotypic disparity.}
+  \label{subfig:models_comparison}
+\end{figure}
+
+
+For families, the power law receives the lowest AIC (-1201.08), followed by the
+Hill equation (-1199.76), without significant difference
+($\Delta AIC = 1.32$). The models are respectively $f(x) = 1 - x^{-0.1429}$
+and $f(x) = \frac{(x - 1)^{0.3723}}{6.0303 + (x - 1)^{0.3723}}$.
+Mitrospingidae, Vangidae, Oreoicidae, Ptiliogonatidae, and Modulatricidae show the
+highest disparity residuals, and Apodidae, Rhinocryptidae, Caprimulgidae, Hydrobatidae,
+and Procellariidae show the lowest (\cref{subfig:models_family}).
+
+\subsection{Disparity through time}\label{subsec:r-disparity-through-time}
+
+\section{Discussion}\label{sec:discussion}
+
+\paragraph{Code and data accessibility}
+\begin{itemize}
+    \item Code for data processing: \url{https://github.com/sun-jiao/osea}
+    \item Code for model training: \url{https://github.com/sun-jiao/MetaFGNet}
+    \item Code for biological analysis: \url{https://github.com/sun-jiao/osea_morpho_evo}
+    \item Model weights: \url{https://huggingface.co/sunjiao/osea}
+\end{itemize}
+
+\paragraph{Conflict of interests}
+
+The author has no conflict of interests.
+
+\paragraph{Author contribution statements}
+
+JS designed the project, programmed the python script and drafted the manuscript.
+
+\printbibliography
+
+\end{document}
