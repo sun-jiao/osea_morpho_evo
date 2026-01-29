@@ -90,6 +90,19 @@ emp_matrix = interpolate_to_common(empirical_data, x_common)
 print("Interpolating Null data (this might take a moment)...")
 null_matrix = interpolate_to_common(null_data, x_common)
 
+# Normalisation
+print("Normalizing curves to Relative Disparity (End point = 1.0)...")
+
+# Normalising Empirical data
+emp_finals = emp_matrix[:, -1]
+emp_finals[emp_finals == 0] = 1e-9
+emp_matrix = emp_matrix / emp_finals[:, None]
+
+# Normalising Null Simulation
+null_finals = null_matrix[:, -1]
+null_finals[null_finals == 0] = 1e-9
+null_matrix = null_matrix / null_finals[:, None]
+
 # Empirical mean value
 mean_empirical = np.nanmean(emp_matrix, axis=0)
 
@@ -106,20 +119,17 @@ plt.figure(figsize=(15, 10))
 plt.fill_between(x_common, lower_null, upper_null, color='gray', alpha=0.3, label='95% Null Range')
 
 # Null Mean (grey line)
-plt.plot(x_common, mean_null, color='gray', linestyle='--', linewidth=1.5, label='Mean Brownian Motion Simulation')
+plt.plot(x_common, mean_null, color='gray', linewidth=1.5, label='Mean Brownian Motion Simulation')
 
 # Empirical Mean (blue line)
-plt.plot(x_common, mean_empirical, color='blue', linewidth=2.5, label='Mean Empirical (Reconstructed)')
-
-# K-Pg mass extinction event
-# plt.axvline(x=-66, color='red', linestyle='--', linewidth=2, label='K-Pg mass extinction')
+plt.plot(x_common, mean_empirical, color='blue', linewidth=2.5, label='Observed')
 
 # K-Pg boundary
 target_x = -66
 line_color = 'red'
 line_label_text = 'K-Pg boundary'
 
-plt.vlines(x=target_x, ymin = 0, ymax = 0.7, color=line_color, linestyle='--', linewidth=2, alpha=0.8, zorder=5)
+plt.vlines(x=target_x, ymin = 0, ymax = 0.9, color=line_color, linestyle='--', linewidth=2, alpha=0.8, zorder=5)
 
 ax = plt.gca()
 
@@ -138,12 +148,12 @@ plt.text(target_x, 0.5, line_label_text,
 # =========================================
 
 plt.xlabel('Time (Mya)')
-plt.ylabel('Morphological Disparity (Spherical Variance)')
+plt.ylabel('Relative Morphological Disparity')
 plt.title('Disparity Through Time: Empirical vs. Null Model (Aggregated)')
 plt.legend(loc='upper left')
 plt.grid(True, which='both', linestyle='--', alpha=0.7)
 plt.xlim(x_min - 0.5, 0)
-plt.ylim(0, 0.8)
+plt.ylim(0, 1.01)
 plt.tight_layout()
 plt.savefig(output_image_name, dpi=300)
 print(f"Done! Plot saved to {output_image_name}")

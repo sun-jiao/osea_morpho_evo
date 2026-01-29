@@ -233,10 +233,9 @@ def reconstruct_ancestral_states(tree, trait_map):
                     # Re-normalize to ensure numerical stability on the manifold
                     # (SLERP theoretically stays on sphere, but float errors accumulate)
                     node.state = node.state / np.linalg.norm(node.state)
+                    node.state /= np.linalg.norm(node.state)
 
                 # --- Contrast Calculation ---
-                # Even with SLERP, we need a vector representing the contrast.
-                # We use the Scaled Euclidean Difference to approximate the Tangent Vector.
                 # Scale = Arc_Length / Chord_Length
 
                 raw_diff = vec_a - vec_b
@@ -256,8 +255,9 @@ def reconstruct_ancestral_states(tree, trait_map):
                 contrast2 = contrast_variance * correction_factor
 
             # CASE B: Polytomy (N != 2) -> Use Projected Mean Approximation
+            # In fact all trees I use are strict binary tree.
+            # This condition is preserved only to prevent any accident
             else:
-                # --- State Reconstruction: Projected Mean ---
                 # 1. Geometric Center in Euclidean Space
                 raw_state = np.average(child_states, axis=0, weights=weights)
 
