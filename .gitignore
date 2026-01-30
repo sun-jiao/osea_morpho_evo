@@ -14,3 +14,4 @@ src/CombinedTrees
 *.jpg
 *\aibrandcfg
 *.pdf
+*.pkl

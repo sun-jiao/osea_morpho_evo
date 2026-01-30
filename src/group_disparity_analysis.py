@@ -1,16 +1,22 @@
 import csv
+import pickle
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn.functional as F
 
-LEVEL = "class"
+LEVEL = "order"
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 weights_df = pd.read_csv("pca_weights.csv", header=None)
 weights = torch.tensor(weights_df.values, dtype=torch.float16, device=device)
 weights = F.normalize(weights, p=2, dim=1)
+
+root_state_file =  open('root_state.pkl', 'rb')
+root_state = pickle.load(root_state_file)
+if not isinstance(root_state, np.ndarray):
+    root_state = np.array(root_state)
 
 bird_info = []
 with open("bird_info.csv", 'r') as f:
@@ -52,14 +58,22 @@ def calculate_disparity(_vectors):
             mean_angle = np.mean(pairwise_angles)
             var_angle = np.var(pairwise_angles)
 
-        return sphere_variance, mean_angle, var_angle
+        norm_root = np.linalg.norm(root_state)
+
+        if mean_vec_len > 1e-9 and norm_root > 1e-9:
+            mean_vec_np = mean_vec.detach().cpu().numpy()
+            cos_sim_with_root = np.dot(mean_vec_np, root_state) / (mean_vec_len.item() * norm_root)
+        else:
+            cos_sim_with_root = 0.0
+
+        return sphere_variance, mean_angle, var_angle, cos_sim_with_root
 
 
 
 if LEVEL == "class":
     result = calculate_disparity(weights)
 
-    print(f'Sphere variance: {result[0]}, Mean angle: {result[1]}, Variance angle: {result[2]}')
+    print(f'Sphere variance: {result[0]}, Mean angle: {result[1]}, Variance angle: {result[2]}, Cosine Similarity with root: {result[3]}')
     exit()
 elif LEVEL == 'order':
     level_index = 4
@@ -84,11 +98,11 @@ for group in unique_groups:
 group_variances = []
 for group, vectors in groups_and_vectors:
     results = calculate_disparity(vectors)
-    group_variances.append((group, results[0], results[1], results[2], len(vectors)))
+    group_variances.append((group, results[0], results[1], results[2], len(vectors), results[3]))
 
 group_variances.sort(key=lambda x: x[1], reverse=True)
 
 with open(f'disparity_{LEVEL}.csv', 'w') as file:
     writer = csv.writer(file)
-    writer.writerow([f'{LEVEL} name', 'sphere_variance', 'mean pairwise angle', 'pairwise angle variance', 'size'])
+    writer.writerow([f'{LEVEL} name', 'sphere_variance', 'mean pairwise angle', 'pairwise angle variance', 'size', 'cos sim with root'])
     writer.writerows(group_variances)

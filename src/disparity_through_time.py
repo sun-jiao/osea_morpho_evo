@@ -2,6 +2,7 @@ import bisect
 import csv
 import io
 import os
+import pickle
 import time
 from multiprocessing import Process
 import gc
@@ -153,7 +154,7 @@ def reconstruct_ancestral_states(tree, trait_map):
     Ancestor State Reconstruction, using Phylogenetic Independent Contrast methods:
     - Leaf nodes: Directly assign from trait_map.
     - Internal nodes: Use weighted average (based on the reciprocal of branch length).
-    - If branch_length is missing or zero, it’s replaced with a tiny ε to avoid division by zero.
+    - If branch_length is missing or zero, it's replaced with a tiny ε to avoid division by zero.
     All states are stored in `node.state`.
     """
 
@@ -517,7 +518,7 @@ def main(tree_file, load_file=None, null_test=False, sample_ratio=100, mode=MODE
 
     base_filename = os.path.basename(tree_file)
 
-    name_match_file = "birdtree_name_match.csv"
+    name_match_file = "avian_timetree_name_match.csv"
     pca_weights_file = "pca_weights.csv"
 
     # the relationship between labels in the tree and indexes of vectors
@@ -596,6 +597,8 @@ def main(tree_file, load_file=None, null_test=False, sample_ratio=100, mode=MODE
         # Do ASR and calculate the ages.
         reconstruct_ancestral_states(tree_item, trait_mapping)
         assign_node_ages(tree_item)
+        # with open('root_state.pkl', 'wb') as f:
+        #     pickle.dump(tree_item.root.state, f)
 
         tree_total_time, dtt_results = compute_dtt_time_slices(tree_item, interval=1.0)
         times, variances = zip(*dtt_results)
