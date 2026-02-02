@@ -1,7 +1,7 @@
 \documentclass[11pt]{article}
 \usepackage{amsmath}
 \usepackage[backend=biber,style=apa,sorting=nyt]{biblatex}
-\usepackage{hyperref}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
 \usepackage{cleveref}
 \usepackage{csquotes}
 \usepackage{lineno}
@@ -48,11 +48,10 @@ utilising a pretrained ResNet34 model capable of recognising over
 extracted weights from the model's final fully connected (fc) layer
 to create vector representations of avian species and assessed their
 similarities using cosine similarity metrics. The results
-demonstrated multiple clustering patterns with or without biological
-meaning. Some clustering results are consistent with traditional
-classifications based on morphology, some are consistent with modern
-cladistic classifications, and some show behavioural and ecological
-similarities. We utilise the spherical variance of vectors
+demonstrate that the high-dimensional embedding space learned by CNNs
+encodes morphological convergence, providing strong evidence for the
+biological interpretability of deep neural networks.
+Subsequently, we utilise the spherical variance of vectors
 to assess the morphological disparity among various taxa and
 evaluated the association between morphological disparity and species richness.
 The result showed  Despite these insights, some clusters indicated
@@ -89,8 +88,8 @@ CNN image classification models, we can leverage the learned weights
 as indicators of morphological traits of various species, providing a
 more objective basis for understanding biological evolution.
 
-In our study, we attempted to use CNNs as a high-throughput, high-dimensional
-morphometry tool capable of capturing holistic visual features, including colour,
+In our study, we utilise CNNs as a high-throughput, high-dimensional
+morphometric tool capable of capturing holistic visual features, including colour,
 texture, and body plan. We trained a model being able to recognise over 10,000
 species of birds, based on ResNet34 architecture \parencite{He2016ResNet},
 and calculated the cosine similarity between species using the weights
@@ -134,7 +133,9 @@ to identify minor differences between highly similar categories. To
 tackle this challenge, we adopted the MetaFGNet model proposed by \textcite{Zhang2018Fine},
 which is specifically designed for FGVC tasks. We utilised their
 pretrained weights "LBird-31\_checkpoint" as the foundation for
-transfer learning on the processed DIB-10K dataset.
+transfer learning on the processed DIB-10K dataset. In the training process,
+all species are regarded as equal categories, without any \textit{a priori} taxonimic
+knowledge being introduced.
 
 For the training process, we employed a server equipped with an RTX 4090D
 GPU, 90GB of memory, and a 15-core
@@ -179,15 +180,15 @@ out in both order-level and family-level.
 
 \subsection{Disparity analysis}\label{subsec:mm-disparity-analysis}
 
-Before proceeding with this analysis, we removed 122 species whose weight
+Before proceeding with this analysis, we removed 249 species whose weight
 vectors were identified as lacking biological significance during the
 manual review process. The specific reasons are detailed in the
 discussion section.
 
-Spherical vector variance of all species was used to assess the morphological
+Spherical vector variance of species is utilised to assess the morphological
 disparity among taxa. The Spearman's rank correlation was employed to examine
-the relationship between diversity (species richness) and
-morphological disparity (spherical variance). The Akaike
+the relationship between diversity (species richness) and morphological
+disparity (spherical variance), where taxa with $N<2$ were excluded. The Akaike
 information criterion (AIC) was employed to assess and compare four models:
 
 \begin{enumerate}
@@ -199,9 +200,16 @@ information criterion (AIC) was employed to assess and compare four models:
     \item Logarithmic rational model: $f(x) = \frac{\ln(x)}{k + \ln(x)}$.
 \end{enumerate}
 
-Both analyses were conducted at both order and family levels. Subsequently, the residuals
+All analyses were conducted at both order and family levels. Subsequently, the residuals
 of the disparity of every taxon are calculated, five taxa with the highest and five with
 the lowest residuals are listed.
+
+Additionally, we explore the relationship between taxa size and mean pairwise angle,
+taxa size and pairwise angle variance, as well as mean pairwise angle and pairwise
+angle variance at both order and family levels. For size vs variance analysis,
+taxa with $N<3$ were excluded to avoid mathematical artefacts
+($\text{variance} = 0$ for $N=1 \text{or} 2$). For the other two analysis (mean angle),
+taxa with $N<2$ were excluded.
 
 \subsection{Disparity through time}\label{subsec:mm-disparity-through-time}
 
@@ -215,18 +223,20 @@ the evolutionary tree.
 As demonstrated by \textcite{Wang2017NormFace}, in the last fully connected layer of CNNs,
 the semantic information is primarily encoded in the angular direction, which is equivalent
 to $L_2$ normalised vectors. Therefore, we assume that the feature vectors randomly walk on
-a unit hypersphere, following a Riemannian Brownian motion.
-Since we do not find an available R or Python bioinformatics package capable of calculating
-spherical ancestral state reconstruction (ASR), we implement it in Python based on the
-following algorithm.
+a unit hypersphere.
+We implemented the algorithm for Spherical Ancestral State Reconstruction by modeling
+phenotypic evolution as Riemannian Brownian Motion on the hypersphere of
+the deep feature space in Python.
 
 \input{algorithm-asr-figure}
 
 In a post-order traversal of the phylogenetic tree, for a selected pair
 of sister nodes (sister groups), let $\mathbf{v}_a, \mathbf{v}_b$
-be the state vectors of them on a unit sphere, and $l_a, l_b$ be their branch
+be the state vectors of them on a unit hypersphere, and $l_a, l_b$ be their branch
 lengths (for leaf nodes) or the equivalent branch lengths (for internal nodes)
-on a timetree. The ancestral state and the contrast is computed
+on a timetree. Let $\mathbf{v}_p$ be the feature vector of their parent node
+(most recent common ancestor), it must be on the two-dimensional Euclidean plane spanned
+by $\mathbf{v}_a$ and $\mathbf{v}_b$. The ancestral state and the contrast is computed
 via the following steps \cref{fig:algorithm-asr}:
 
 \begin{enumerate}
@@ -244,8 +254,9 @@ via the following steps \cref{fig:algorithm-asr}:
 
     \item To adjust for the curvature of the state space, the contrast variance is scaled by the ratio of the squared arc length to the squared chord length:
     \begin{equation}
-        \text{Contrast}^2 = \frac{\theta^2}{l_1 + l_2} = \underbrace{\frac{||\mathbf{v}_1 - \mathbf{v}_2||^2}{l_1 + l_2}}_{\text{Euclidean Variance}} \times \underbrace{\frac{\theta^2}{||\mathbf{v}_1 - \mathbf{v}_2||^2}}_{\text{Correction Factor}}
+        \text{Contrast}^2 = \underbrace{\frac{(\mathbf{v}_1 - \mathbf{v}_2)^{\circ 2}}{l_1 + l_2}}_{\text{Euclidean Variance}} \times \underbrace{\frac{\theta^2}{||\mathbf{v}_1 - \mathbf{v}_2||^2}}_{\text{Correction Factor}}
     \end{equation}
+    where $\circ$ means Hadamard power (element-wise power).
 
     \item When the traversal is completed, the estimated evolutionary rate of the whole tree is:
     \begin{equation}
@@ -256,7 +267,7 @@ via the following steps \cref{fig:algorithm-asr}:
 
 Once the whole ASR process is finished, the spherical variance for every time slice (1 ma) is calculated
 on the whole timetree, which represents the phenotypic disparity of all birds at the specific time.
-Then, we conduct 100 times of null simulations in preorder traversals.
+Then, we conduct 100 times of null simulations based on Brownian motion model in preorder traversals.
 For every internal node, the feature vectors of its children are calculated
 according to the following algorithm (\cref{fig:algorithm-bm}):
 
@@ -280,20 +291,27 @@ according to the following algorithm (\cref{fig:algorithm-bm}):
     \begin{equation}
         \mathbf{v}_{c} = \cos{\theta}~\mathbf{v}_{p} + \frac{\sin{\theta}}{||\mathbf{v}_{t}||} \mathbf{v}_{t}
     \end{equation}
-    and $\mathbf{v}_{c}$ is the simulated feature vector of the child species.
+    and $\mathbf{v}_{c}$ is the simulational feature vector of the child species.
 \end{enumerate}
 
 \input{algorithm-bm-figure}
 
-When the whole traversal is finished, the ASR is conducted based on the simulated
+When the whole traversal is finished, the ASR is conducted based on the simulational
 feature vectors of all modern species (leaf nodes) following the aforementioned algorithm,
 as well as the spherical variance for every time slice. Finally, the empirical disparity
 through time result and the mean disparity through time of all 100 times of null simulations
-are visualised and compared from evolutionary biological perspective.
+are visualised and compared. The whole disparity-through-time analysis is conducted on the trees
+by \textcite{Stiller2024Complexity}.
 
 \section{Result}\label{sec:result}
 
 \subsection{Model training}\label{subsec:r-model-training}
+
+The model achieved 90.8\% accuracy on the training set and 87.6\% accuracy
+on the validation set. Grad-CAM reveals that the network's attention is focused
+on birds, effectively ignoring complex backgrounds and occlusions. The attention
+maps cover the entire bird, indicating that the extracted phenotypic vectors
+can be regarded as representations of the shape, plumage, and colour of species (\cref{fig:gradcam}).
 
 \begin{figure}[htbp]
     \centering
@@ -302,12 +320,6 @@ are visualised and compared from evolutionary biological perspective.
     focused on birds, ignoring backgrounds and occlusions.}
     \label{fig:gradcam}
 \end{figure}
-
-The model achieved 90.8\% accuracy on the training set and 87.6\% accuracy
-on the validation set. Grad-CAM reveals that the network's attention is focused
-on birds, effectively ignoring complex backgrounds and occlusions. The attention
-maps cover the entire bird, indicating that the extracted phenotypic vectors
-can be regarded as representations of the shape, plumage, and colour of species (\cref{fig:gradcam}).
 
 \subsection{Similarity clustering}\label{subsec:r-similarity-clustering}
 
@@ -333,11 +345,16 @@ outlier species and 533 order-level outlier species (\cref{fig:cluster}).
     \centering
     \includegraphics[width=\textwidth]{cluster-2}
   \end{minipage}
-  \caption{The clustering result with high-purity branches collapsed.}
+  \caption{The unrooted clustering result with high-purity branches collapsed.}
 \label{fig:cluster}
 \end{figure}
 
 \subsection{Disparity analysis}\label{subsec:r-disparity-analysis}
+
+Regarding the relationship between order-level disparity and diversity, the
+Spearman's coefficient is at 0.966, with a p-value of $1.45\times10^{-24}$.
+For families, the Spearman's coefficient was 0.908,
+with a p-value of $3.56\times10^{-83}$.
 
 The stretched exponential model receives the lowest AIC (-251.33) at the order
 level, followed by the Hill equation (-250.02), without significant difference
@@ -377,21 +394,91 @@ Mitrospingidae, Vangidae, Oreoicidae, Ptiliogonatidae, and Modulatricidae show t
 highest disparity residuals, and Apodidae, Rhinocryptidae, Caprimulgidae, Hydrobatidae,
 and Procellariidae show the lowest (\cref{subfig:models_family}).
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{angles_analysis}
+    \caption{(a-f) The relationship between taxa size and mean pairwise angle,
+        taxa size and pairwise angle variance, as well as mean pairwise angle and pairwise
+        angle variance at both order and family levels. Spearman's rank coefficients ($\rho$)
+        and p-values are listed for each figure; (g-h) the distribution of mean pairwise angle
+        and pairwise angle variance of families and orders, the mean values of all birds are
+        marked as the red dash line.}
+    \label{fig:angles}
+\end{figure}
+
 \subsection{Disparity through time}\label{subsec:r-disparity-through-time}
 
-Placeholder (\cref{fig:dtt})
+The disparity-through-time (DTT) analysis reveals an early-burst pattern for the evolution of
+avian visual morphospace. As shown in \cref{fig:dtt}, the empirical data of relative disparity
+deviates extremely from the expectation of Brownian Motion null simulation.
+
+Following the K-Pg mass extinction (~66 Mya), the empirical disparity immediately increases
+at an intense rate. This curve is consistently higher than the mean null expectation throughout
+the Paleogene and Neogene, resulting in a positive Morphological Disparity Index (MDI).
+
+Crucially, the empirical curve achieves approximately 50\% of the modern disparity shortly after
+the K-Pg mass extinction, followed by a relative deceleration towards the present. Conversely,
+the BM model requires significantly more time to reach the same disparity.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{dtt_null_test_combined}
-    \caption{Grad-CAM reveals that the network's attention is consistently
-    focused on birds, ignoring backgrounds and occlusions.}
+    \includegraphics[width=0.65\textwidth]{dtt_null_test_combined}
+    \caption{Relative disparity-through-time (DTT) plot for avian visual morphospace.
+    The solid blue line represents the empirical disparity, while the solid grey line
+    indicates the mean expectation under a multivariate Brownian Motion (BM) null model.
+    Both empirical and simulational data are normalised relative to the disparity of
+    the extant time (0 Mya). The K-Pg boundary (66 Mya) is marked as the red dash line.}
     \label{fig:dtt}
 \end{figure}
 
 \section{Discussion}\label{sec:discussion}
 
-Placeholder
+\subsection{Morphological similarity}\label{subsec:morphological-similarity}
+
+In the raw result of the clustering, many extinct species clustered together,
+possibly due to their representation via skeletal images, artistic reconstructions, or
+other non-biological patterns, being fundamentally different from extant species.
+Furthermore, some of the recently described species or newly separated cryptic species grouped
+together, being indistinguishable, which might reflect insufficient image data, leading to
+underfitting of the model. All extinct species and some of the newly described or
+newly split species, totally 249 species, were removed in subsequent analyses.
+
+Although the clustering result is not perfectly align with current taxonomy,
+these inconsistencies exhibits some historically noted morphological similarity \cref{fig:cluster}.
+
+In the Palaeognathae, four orders (Struthioniformes, Rheiformes, Casuariiformes, Apterygiformes)
+of flightless birds form a distinct cluster, being driven by their unique body plans. In contrast,
+Tinamiformes represents a notable exception, which is deeply within the Galliformes.
+This topological incongruence highlights their convergent evolution. Tinamiformes and many Galliformes
+have evolved highly convergently, exhibiting compact body shapes for ground-dwelling lifestyles,
+and occupy similar niches \parencite{Glenny1946Systematic}. The model correctly identifies
+this ecological and morphological similarity \cref{fig:cluster}.
+
+Furthermore, the inclusion of other visually quail-like terrestrial taxa like
+Turnicidae (Buttonquails) \parencite{Rotthowe1998Evidence}, Menuridae \parencite{Winkler2020Lyrebirds},
+Neomorphus \parencite{Haffer1977Neomorphus}
+within the Galliformes cluster further validates that our model's feature space captures
+morphological and ecological convergent adaptation and visual similarity. In the eyes of CNNs,
+as long as you scratch for food and run around on the ground like a landfowl,
+then you are a "landfowl" \cref{fig:cluster}.
+
+The clustering of Caprimulgiformes \textit{sensu lato}, Strigiformes, Accipitriformes, and Falconiformes
+forms a visually similar group \cref{fig:cluster}, with two layers of convergent evolution: Strigiformes and Caprimulgiformes \textit{s. l.}
+share large eyes and cryptic plumage patterns for their nocturnal habits; and Strigiformes, Accipitriformes,
+and Falconiformes share the raptorial facial characteristics like forward-facing eyes and hooked beaks
+\parencite{Fidler2004Convergent, Wu2021Genomic}.
+
+Other notable similarity exhibited in the clustering result includes
+Hirundinidae and Apodi（Apodidae and Hemiprocnidae) \parencite{Norberg1986Insectivorous},
+Sphenisciformes (Penguins), Alcidae and Procellariiformes \parencite{Cody1973Coexistence},
+as well as Phaethontiformes, Suliformes, and Pelecanidae \parencite{Hedges1994Molecules}~\ldots
+It's demonstrated that the feature vectors' distribution in morphological space is not
+arbitrary, but is constrained by objective phenotypic similarity. It actually reinvented the
+classical taxonomy from Linnaeus to Audubon.
+
+\subsection{Geometry of the neural network}\label{subsec:geometry-of-the-neural-network}
+
+(To be continued\ldots)
 
 \paragraph{Code and data accessibility}
 \begin{itemize}
