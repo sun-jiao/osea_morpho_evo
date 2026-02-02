@@ -2,7 +2,8 @@
     \centering
     \begin{minipage}{0.45\textwidth}
         \centering
-        \begin{tikzpicture}[>=Stealth, thick, scale=0.9]
+        \begin{tikzpicture}[>=Stealth, thick, scale=0.8]
+            \useasboundingbox (-1.5, -0.5) rectangle (1.5, 5.5);
 
             % 1. Define Coordinates
             \coordinate (O) at (0,0);
@@ -86,18 +87,18 @@
     \begin{minipage}{0.45\textwidth}
         \centering
         \begin{tikzpicture}[scale=2,every node/.style={font=\small},line width=0.8pt]
-    \coordinate (Root) at (0,0);
-    \coordinate (Internal) at (0, -0.3);
-    \coordinate (A) at (-0.5, -2);
-    \coordinate (B) at (0.5, -2);
+            \coordinate (Root) at (0,0);
+            \coordinate (Internal) at (0, -0.3);
+            \coordinate (A) at (-0.5, -2);
+            \coordinate (B) at (0.5, -2);
 
-    \draw (Root) -- (Internal);
-    \draw (Internal) -| (A) node[pos=0.7, left] {$l_a$};
-    \draw (Internal) -| (B) node[pos=0.7, right] {$l_b$};
+            \draw (Root) -- (Internal);
+            \draw (Internal) -| (A) node[pos=0.7, left] {$l_a$};
+            \draw (Internal) -| (B) node[pos=0.7, right] {$l_b$};
 
-    \node[below] at (A) {A};
-    \node[below] at (B) {B};
-    \node[above right] at (Internal) {P};
+            \node[below] at (A) {A};
+            \node[below] at (B) {B};
+            \node[above right] at (Internal) {P};
         \end{tikzpicture}
     \end{minipage}
     \caption{Geometric diagram of the ancestor state reconstruction algorithm. }

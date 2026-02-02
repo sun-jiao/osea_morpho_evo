@@ -14,10 +14,10 @@
 
         % --- AXES ---
         % Vertical dashed axis (upwards)
-        \draw[dashed, thick] (0, 0) -- (0, 2.5);
+        \draw[dashed, thin] (0, 0) -- (0, 2.5);
 
         % Horizontal dashed axis (Tangent Space)
-        \draw[dashed, thick] (-2, 0) -- (7, 0) node[right] {tangent space};
+        \draw[dashed, thin] (-2, 0) -- (7, 0) node[right] {tangent space};
 
 
         % --- TOP PART: PROJECTION ---
@@ -26,14 +26,14 @@
         \coordinate (Vx) at (\angAlpha:\lenVx); % Defined by angle alpha
         % Note: In the image, vx is (x,y). Let's approximate the slope visually.
         \coordinate (Vx_End) at (5, 2);
-        \draw[->, ultra thick] (Origin) -- (Vx_End) node[midway, above left] {$\mathrm{v_x}$};
+        \draw[->, thin] (Origin) -- (Vx_End) node[midway, above left] {$\mathrm{v_x}$};
 
         % Vector vt (Projection on horizontal)
         \coordinate (Vt_End) at (5, 0);
-        \draw[->, ultra thick] (Origin) -- (Vt_End) node[midway, above] {$\mathrm{v_t}$};
+        \draw[->, thin] (Origin) -- (Vt_End) node[midway, above] {$\mathrm{v_t}$};
 
         % Projection line 'a'
-        \draw[dashed, thick] (Vx_End) -- (Vt_End) node[midway, right] {$\mathrm{a}$};
+        \draw[dashed, thin] (Vx_End) -- (Vt_End) node[midway, right] {$\mathrm{a}$};
 
         % Angle Alpha
         \coordinate (Y_Axis_Point) at (0, 2);
@@ -53,20 +53,20 @@
 
         % 1. Vertical Component (vp * cos theta)
         % Draws from Center to M
-        \draw[->, ultra thick] (Center) -- (M) node[midway, left=5pt] {$\mathrm{v_p} \cdot \cos\theta$};
+        \draw[->, thin] (Center) -- (M) node[midway, left=5pt] {$\mathrm{v_p} \cdot \cos\theta$};
 
         % 2. Horizontal Component (vt/|vt| * sin theta)
         % Draws from M to S
-        \draw[->, ultra thick] (M) -- (S) node[midway, above] {$\frac{\mathrm{v_t}}{\|\mathrm{v_t}\|} \sin\theta$};
+        \draw[->, thin] (M) -- (S) node[midway, above] {$\frac{\mathrm{v_t}}{\|\mathrm{v_t}\|} \sin\theta$};
 
         % 3. Result Vector (vc)
         % Draws from Center to S
-        \draw[->, ultra thick] (Center) -- (S) node[midway, below right] {$\mathrm{v_c}$};
+        \draw[->, thin] (Center) -- (S) node[midway, below right] {$\mathrm{v_c}$};
 
         % 4. Parent Vector (vp) label logic
         % The line goes from Center to Origin.
         % We need an arrow head at the Origin.
-        \draw[->, ultra thick] (Center) -- (Origin); % completing the vertical line
+        \draw[->, thin] (Center) -- (Origin); % completing the vertical line
         \node[above=40pt, left=5pt] at (0, -2.5) {$\mathrm{v_p}$}; % Label roughly in the middle of the top section
 
         % 5. Angle Theta

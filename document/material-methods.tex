@@ -1,0 +1,200 @@
+\subsection{Data processing}\label{subsec:mm-data-processing}
+
+In this study, we utilised the DongNiao International Birds 10000 Dataset (DIB-10K)
+by \textcite{Mei2020Dongniao}, which comprises over 4.8 million images representing
+10,922 bird species, following the IOC 10.1 taxonomy \parencite{Gill2021IOC}. This
+extensive dataset encompasses a wide variety of bird species, morphological variants,
+postures, and gestures \parencite{Mei2020Dongniao}. Despite their efforts in manual
+review and correction, the dataset contains numerous duplicate and erroneous images,
+necessitating a comprehensive data cleaning process.
+
+For the deduplication, we employed the pHash method to detect near-duplicate images
+by comparing these hashes \parencite{Farid2021Overview}. Duplicates spanning multiple
+categories are completely removed, and for intracategory duplicates, only one copy is
+retained in its category.
+
+To address erroneous images with non-avian subjects, we utilised the pretrained Faster
+Region-based Convolutional Neural Network (Faster R-CNN,~\cite{Ren2017Faster}) in
+the torchvision library \parencite{Ansel2024Pytorch}. For images where no birds were
+detected, we implemented a two-tiered approach: images from high-volume categories
+($\geq200$ images) were automatically deleted, while those from low-volume categories
+($<200$ images) were moved to a separate directory for manual inspection.
+After a manual thorough review, valid images were reintegrated into the dataset.
+
+\subsection{Model training}\label{subsec:mm-model-training}
+
+The task of recognising over 10,000 bird species is a
+fine-grained visual categorisation (FGVC) problem, where the goal is
+to identify minor differences between highly similar categories. To
+tackle this challenge, we adopted the MetaFGNet model proposed by \textcite{Zhang2018Fine},
+which is specifically designed for FGVC tasks. We utilised their
+pretrained weights "LBird-31\_checkpoint" as the foundation for
+transfer learning on the processed DIB-10K dataset. In the training process,
+all species are regarded as equal categories, without any \textit{a priori} taxonimic
+knowledge being introduced.
+
+For the training process, we employed a server equipped with an RTX 4090D
+GPU, 90GB of memory, and a 15-core
+Intel\textsuperscript{\textregistered} Xeon\textsuperscript{\textregistered}
+Platinum 8474C processor from the \href{https://www.autodl.com/docs/}{AutoDL platform}.
+This high-performance setup allowed for efficient processing and model training.
+The training procedure was conducted for 32 epochs.
+
+We reassigned the orders and families of all species (categories) to align with the
+IOC 15.1 \parencite{Gill2025IOC}. The weights are extracted from the final fully
+connected layer (fc) of the ResNet34 model. Weights of each species were regarded as a
+512-dimensional vector representing the morphological traits. They are reduced to the
+lowest boundary that can explain 80\% of all variances for subsequent analyses.
+Gradient-weighted Class Activation Mapping (Grad-CAM,~\cite{Selvaraju2020Grad}) is
+employed to visualise
+
+\subsection{Similarity clustering}\label{subsec:mm-similarity-clustering}
+
+Species similarity was quantified using cosine similarity, implemented via
+dot product calculation of $L_2$-normalised vectors in PyTorch \parencite{Ansel2024Pytorch}.
+Next, we conducted agglomerative hierarchical clustering using the average
+linkage method to merge clusters. This was executed with the
+hierarchical clustering functionalities implemented in the SciPy
+library \parencite{Gommers2025Scipy}. The hierarchical structure of the
+clusters was output in Newick format, a widely used format in
+computational biology for tree structures. Finally, we utilised ETE3
+to export the clustering dendrogram in SVG format \parencite{Huerta2016ETE}.
+
+To analysing the clustering result, we applied a recursive top-down
+analysis to the tree, evaluating each internal node for taxonomic
+"purity." For a given node, we defined taxonomic purity as
+the proportion of the majority taxon. A node with a taxonomic
+purity of more than 85\% was considered taxonomically consistent. For
+taxonomically consistent nodes, all of their child nodes were
+excluded from further checks. For such nodes, we further examined
+all species to identify and annotate taxonomical outliers, which belong
+to taxa that different from the majority taxon of this branch.
+Finally, we conducted manual review to confirm whether outliers had
+biological similarity with the majority taxa of their branches and
+what kinds of similarity do they have. The above pipeline was carried
+out in both order-level and family-level.
+
+\subsection{Disparity analysis}\label{subsec:mm-disparity-analysis}
+
+Before proceeding with this analysis, we removed 249 species whose weight
+vectors were identified as lacking biological significance during the
+manual review process. The specific reasons are detailed in the
+discussion section.
+
+Spherical vector variance of species is utilised to assess the morphological
+disparity among taxa. The Spearman's rank correlation was employed to examine
+the relationship between diversity (species richness) and morphological
+disparity (spherical variance), where taxa with $N<2$ were excluded. The Akaike
+information criterion (AIC) was employed to assess and compare four models:
+
+\begin{enumerate}
+    \item Power law: $f(x) = 1 - x^b$, the coefficient of $x^b$
+        is fixed as 1 to satisfy the boundary condition $f(1) = 0$,
+        reflecting the theoretical expectation;
+    \item Stretched exponential model: $f(x) = 1 - \exp(-\lambda \cdot (x - 1)^\beta)$;
+    \item Hill equation: $f(x) = \frac{(x - 1)^n}{k + (x - 1)^n}$;
+    \item Logarithmic rational model: $f(x) = \frac{\ln(x)}{k + \ln(x)}$.
+\end{enumerate}
+
+All analyses were conducted at both order and family levels. Subsequently, the residuals
+of the disparity of every taxon are calculated, five taxa with the highest and five with
+the lowest residuals are listed.
+
+Additionally, we explore the relationship between taxa size and mean pairwise angle,
+taxa size and pairwise angle variance, as well as mean pairwise angle and pairwise
+angle variance at both order and family levels. For size vs variance analysis,
+taxa with $N<3$ were excluded to avoid mathematical artefacts
+($\text{variance} = 0$ for $N=1 \text{or} 2$). For the other two analysis (mean angle),
+taxa with $N<2$ were excluded.
+
+\subsection{Disparity through time}\label{subsec:mm-disparity-through-time}
+
+In classical phylogenetic independent contrast (PIC) proposed by
+\textcite{Felsenstein1985PIC}, The evolution of phenotypic traits
+follows a Brownian motion model in Euclidean space, in which the trait of each descendant
+is derived from the trait of the ancestral species through a random walk in Euclidean space.
+The time of this walk is proportional to the divergence time, which is the branch length of
+the evolutionary tree.
+
+As demonstrated by \textcite{Wang2017NormFace}, in the last fully connected layer of CNNs,
+the semantic information is primarily encoded in the angular direction, which is equivalent
+to $L_2$ normalised vectors. Therefore, we assume that the feature vectors randomly walk on
+a unit hypersphere.
+We implemented the algorithm for Spherical Ancestral State Reconstruction by modeling
+phenotypic evolution as Riemannian Brownian Motion on the hypersphere of
+the deep feature space in Python.
+
+\input{algorithm-asr-figure}
+
+In a post-order traversal of the phylogenetic tree, for a selected pair
+of sister nodes (sister groups), let $\mathbf{v}_a, \mathbf{v}_b$
+be the state vectors of them on a unit hypersphere, and $l_a, l_b$ be their branch
+lengths (for leaf nodes) or the equivalent branch lengths (for internal nodes)
+on a timetree. Let $\mathbf{v}_p$ be the feature vector of their parent node
+(most recent common ancestor), it must be on the two-dimensional Euclidean plane spanned
+by $\mathbf{v}_a$ and $\mathbf{v}_b$. The ancestral state and the contrast is computed
+via the following steps \cref{fig:algorithm-asr}:
+
+\begin{enumerate}
+    \item We firstly calculate their geodesic distance, which is equivalent to their included angle
+            for $L_2$ normalised vectors:
+    \begin{equation}
+        \theta = \arccos{(\mathbf{v}_a\cdot\mathbf{v}_b)}
+    \end{equation}
+
+    \item The parent state $\mathbf{v}_p$ is inferred by interpolating along the geodesic arc:
+    \begin{equation}
+        \mathbf{v}_p = \frac{\sin((1-t)\theta)}{\sin\theta}\mathbf{v}_a + \frac{\sin(t\theta)}{\sin\theta}\mathbf{v}_b
+    \end{equation}
+    where $t = l_b / (l_a + l_b)$.
+
+    \item To adjust for the curvature of the state space, the contrast variance is scaled by the ratio of the squared arc length to the squared chord length:
+    \begin{equation}
+        \text{Contrast}^2 = \underbrace{\frac{(\mathbf{v}_a - \mathbf{v}_b)^{\circ 2}}{l_a + l_b}}_{\text{Euclidean Variance}} \times \underbrace{\frac{\theta^2}{||\mathbf{v}_a - \mathbf{v}_b||^2}}_{\text{Correction Factor}}
+    \end{equation}
+    where $\circ$ means Hadamard power (element-wise power).
+
+    \item When the traversal is completed, the estimated evolutionary rate of the whole tree is:
+    \begin{equation}
+        \hat{\sigma}^2 = \frac{\sum\text{Contrast}^2}{N-1}
+    \end{equation}
+    where $N$ is the numbers of leaf nodes (species).
+\end{enumerate}
+
+Once the whole ASR process is finished, the spherical variance for every time slice (1 ma) is calculated
+on the whole timetree, which represents the phenotypic disparity of all birds at the specific time.
+Then, we conduct 100 times of null simulations based on Brownian motion model in preorder traversals.
+For every internal node, the feature vectors of its children are calculated
+according to the following algorithm (\cref{fig:algorithm-bm}):
+
+\input{algorithm-bm-figure}
+
+\begin{enumerate}
+    \item Create a Gaussian noise $\mathbf{v}_{x}$ in the Euclidean space following this multivariate normal distribution:
+    \begin{equation}
+        \mathbf{v}_{x} \sim \mathcal{N}(\mathbf{0}, \hat{\sigma}^2 t \mathbf{I}_D)
+    \end{equation}
+    where $t$ is the evolution time (branch length) of the child node.
+    \item Project $\mathbf{v}_{x}$ onto the tangent space of the hypersphere:
+    \begin{equation}
+        a = \mathbf{v}_{p} \cdot \mathbf{v}_{x}
+    \end{equation}
+    \begin{equation}
+        \mathbf{v}_{t} = \mathbf{v}_{x} - a \mathbf{v}_{p}
+    \end{equation}
+    \item Move on the hypersphere following a great circle, the direction and geodesic distance is same as the direction and the norm of $\mathbf{v}_{t}$:
+    \begin{equation}
+        \theta = ||\mathbf{v}_{t}||
+    \end{equation}
+    \begin{equation}
+        \mathbf{v}_{c} = \cos{\theta}~\mathbf{v}_{p} + \frac{\sin{\theta}}{||\mathbf{v}_{t}||} \mathbf{v}_{t}
+    \end{equation}
+    and $\mathbf{v}_{c}$ is the simulational feature vector of the child species.
+\end{enumerate}
+
+When the whole traversal is finished, the ASR is conducted based on the simulational
+feature vectors of all modern species (leaf nodes) following the aforementioned algorithm,
+as well as the spherical variance for every time slice. Finally, the empirical disparity
+through time result and the mean disparity through time of all 100 times of null simulations
+are visualised and compared. The whole disparity-through-time analysis is conducted on the trees
+by \textcite{Stiller2024Complexity}.

@@ -1,0 +1,63 @@
+\subsection{Geometry of the morphospace}\label{subsec:geometry-of-the-morphospace}
+
+The geometric analysis of the feature space reveals a distinctive interplay
+between high-dimensional properties and evolutionary constraints.
+The mean pairwise angle of $\frac{\pi}{2}$ aligns with the
+property of high-dimensional spaces where random vectors tend to
+be orthogonal and equidistant (\cref{fig:angles}).
+Intra-taxa pairwise angles, although varied across taxa, are
+smaller than the global mean value.
+Since it is trained solely on species classification (flat labels),
+a hierarchical taxonomic structure (Order/Family) automatically emerges in the high-dimensional feature space.
+This demonstrates that feature vectors are semantically clustered,
+a biological taxa occupying specific sub-manifolds and therefore exhibiting smaller
+mean pairwise angle. This indicates that biological relationships are strongly encoded
+in morphological features that models have to learn this structure when
+searching for the optimal classification structure.
+
+In the raw result of the clustering, many extinct species clustered together,
+possibly due to their representation via skeletal images, artistic reconstructions, or
+other non-biological patterns, being fundamentally different from extant species.
+Furthermore, some of the recently described species or newly separated cryptic species grouped
+together, being indistinguishable, which might reflect insufficient image data, leading to
+underfitting of the model. All extinct species and some of the newly described or
+newly split species, totally 249 species, were removed in subsequent analyses.
+
+Although the clustering result is not perfectly align with current taxonomy,
+these inconsistencies exhibits some historically noted morphological similarity.
+
+In the Palaeognathae, four orders (Struthioniformes, Rheiformes, Casuariiformes, Apterygiformes)
+of flightless birds form a distinct cluster, being driven by their unique body plans. In contrast,
+Tinamiformes represents a notable exception, which is deeply within the Galliformes.
+This topological incongruence highlights their convergent evolution. Tinamiformes and many Galliformes
+have evolved highly convergently, exhibiting compact body shapes for ground-dwelling lifestyles,
+and occupy similar niches \parencite{Glenny1946Systematic}. The model correctly identifies
+this ecological and morphological similarity (\cref{fig:cluster}).
+
+Furthermore, the inclusion of other visually quail-like terrestrial taxa like
+Turnicidae (Buttonquails) \parencite{Rotthowe1998Evidence}, Menuridae \parencite{Winkler2020Lyrebirds},
+Neomorphus \parencite{Haffer1977Neomorphus}
+within the Galliformes cluster further validates that our model's feature space captures
+morphological and ecological convergent adaptation and visual similarity. In the eyes of CNNs,
+as long as you scratch for food and run around on the ground like a landfowl,
+then you are a "landfowl" (\cref{fig:cluster}).
+
+The clustering of Caprimulgiformes \textit{sensu lato}, Strigiformes, Accipitriformes, and Falconiformes
+forms a visually similar group (\cref{fig:cluster}), with two layers of convergent evolution: Strigiformes and Caprimulgiformes \textit{s. l.}
+share large eyes and cryptic plumage patterns for their nocturnal habits; and Strigiformes, Accipitriformes,
+and Falconiformes share the raptorial facial characteristics like forward-facing eyes and hooked beaks
+\parencite{Fidler2004Convergent, Wu2021Genomic}.
+
+Other notable similarity exhibited in the clustering result includes
+Hirundinidae and Apodi（Apodidae and Hemiprocnidae) \parencite{Norberg1986Insectivorous},
+Sphenisciformes (Penguins), Alcidae and Procellariiformes \parencite{Cody1973Coexistence},
+as well as Phaethontiformes, Suliformes, and Pelecanidae \parencite{Hedges1994Molecules}~\ldots~(\cref{fig:cluster})
+It's demonstrated that the feature vectors' distribution in morphological space is not
+arbitrary, but is constrained by objective phenotypic similarity. Considering that we did not
+introduce \textit{a priori} taxonomic knowledge in the training process, it actually reinvented
+the classical taxonomy from Linnaeus to Audubon. The model's taxonomy is based on phenotype,
+yet with higher throughput of data than classical taxonomy and morphometrics.
+This naturally creates a gap compared to molecular phylogenetic trees.
+The gap represents the disconnection between visual disparity and genetic distance.
+
+\section{Main drivers of diversification}\label{sec:main-drivers-of-diversification}
