@@ -103,22 +103,48 @@ thereby reinforcing the biological credibility of the subsequent morphological d
     \label{fig:penguin}
 \end{figure}
 
-
-\subsection{Main drivers of diversification}\label{subsec:main-drivers-of-diversification}
-
-(Placeholder)
-
 \subsection{Macroevolution of birds}\label{subsec:macroevolution-of-birds}
 
-The disparity-through-time (DTT) analysis (\cref{fig:dtt}) shows that morphological
-disparity increased rapidly after the K-Pg mass extinction.
-This strongly supports \posscite{Simpson1944Tempo} adaptive radiation and the niche filling hypothesis.
+The Spearman's rank correlation demonstrates that species richness is the primary driver of morphospace expansion.
+The strong positive correlation between taxon size and hyperspherical variance (Orders: $\rho = 0.966$; Families: $\rho = 0.908$)
+confirms that as clades diversify, they tend to colonise a larger volume of the visual feature space.
+This pattern is consistent with the "niche filling" model \parencite{Simpson1944Tempo},
+where speciation events are often associated with the exploration of novel regions
+in the phenotypic landscape to minimise competition.
+However, this expansion exhibits diminishing returns (\cref{fig:models_comparison}),
+suggesting that the marginal gain in disparity decreases as taxa become extremely large.
+
+In contrast, structural heterogeneity appears to be constrained that is largely independent of diversity.
+At the order level, angle variance is statistically independent of clade size ($\rho=0.24,p>0.05$),
+and at the family level, the correlation is weak ($\rho=0.34$).
+This implies that even as a clade radiates swiftly, its internal geometric uniformity
+does not change chaotically but remains confined within a stable range.
+
+In the top-5 families with high disparity residuals, four of them are newly recognised based on
+molecular phylogeny, indicating that they exhibit greater heterogeneity than long-established taxa,
+which is why they remained unrecognised by zoologists for a long time.
+
+Vangidae is a textbook example of the radiation evolution.
+Although there aren't many species (39), they have evolved a variety of forms on Madagascar,
+ranging from shrike-like and flycatcher-like to finch-like species \parencite{Reddy2012Diversification, Jonsson2012Ecological}.
+The model captures this extreme morphological difference, producing a very high positive residual.
+
+Similarly, Cotingidae is given the seventh-highest disparity residual among families.
+Their differences in appearance are extremely eye-catching, ranging from the
+brightly coloured cocks-of-the-rock (\textit{Rupicola})
+to the relatively dull-coloured pihas (\textit{Lipaugus} and \textit{Snowornis}),
+with huge differences \parencite{Winkler2020Cotingas}.
+
+The disparity-through-time (DTT) analysis (\cref{fig:dtt}) exhibits a convex shape,
+suggesting that morphological disparity increased rapidly after the K-Pg mass extinction.
+This furtherly supports \posscite{Simpson1944Tempo} adaptive radiation and the niche filling hypothesis.
 After mass extinctions vacated ecological niches,
 birds rapidly evolved extreme morphological diversity to occupy these positions.
-
-Traditional morphometrics typically selects only a few features (such as beak length and wingspan),
-potentially missing overall traits.
-Our method, however, is pan-phenomic, capturing holistic visual features.
+The surviving avian lineages rapidly radiated to fill the ecological niches,
+establishing the major disparate body plans (visual morphotypes) within a short geological window.
+The positive Morphological Disparity Index (MDI), evidenced in \cref{fig:dtt},
+reinforces that the initial partitioning of the visual morphospace
+was significantly faster than neutral drift expectations.
 
 \subsection{Inspirations for further macroevolution studies}\label{subsec:inspirations-for-further-macroevolution-studies}
 
@@ -131,8 +157,8 @@ organisms, for instance, comparing the phenotypic disparity of animals, fungi, a
 In contrast, the difficulty in aligning extinct species with extant birds highlights its limitations. This method also
 has difficulties in measuring inner structure of organisms. Moreover, dispite our previous discussion on the
 interpretability of models, this is still a major weakness of this novel method, especially compared to geometric
-methods. This also restricts its applicability in comparative studies on the difference between different body parts
-(mosaic evolution).
+methods. This also restricts its applicability in comparative studies on the difference (mosaic evolution)
+between different body parts (e.g., beak vs. claw) or different geometrics (e.g., full length vs. weight).
 
 Therefore, Our methodology is not a suppression or negation of the traditional methods. Rather, it serves as an
 important supplement to the traditional one. They can be incorporated and synthesised to provide more

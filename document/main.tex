@@ -59,12 +59,20 @@ utilising a ResNet34 model capable of recognising over
 extract weights from the model's final fully connected (fc) layer
 and investigate the semantic alignment between the high-dimensional
 embedding space learned by the model and biological phenotypes. The results
-demonstrate that the high-dimensional embedding space
-encodes phenotypic convergence, providing evidence for the
-biological semantical interpretability of deep neural networks.
-Subsequently, we utilise the spherical variance of vectors
-to assess the morphological disparity among various taxa and
-evaluate the association between morphological disparity and species richness.
+demonstrate that the high-dimensional embedding space encodes phenotypic convergence.
+Subsequently, we assess the morphological disparity among various taxa and
+evaluate the association between morphological disparity and species richness,
+demonstrating that species richness is the primary driver of morphospace expansion.
+Moreover, the disparity-through-time analysis reveal a visual "early burst"
+after the K-Pg extinction.
+
+While mainly aimed at evolutionary analysis, this study also provides
+insights into the interpretability of Deep Neural Networks. We demonstrate
+that hierarchical semantic structures (biological taxonomy) emerged in
+the high-dimensional embedding space despite being trained on flat labels.
+Furthermore, through adversarial examples, we provide evidence that our model
+in this task can overcome texture bias and learn holistic shape representations
+(body plans), challenging the prevailing view that CNNs rely primarily on local textures.
 \end{abstract}
 
 \addcontentsline{toc}{section}{Abstract}
@@ -118,6 +126,30 @@ is used as an alternative to the classes of neural networks.
 \section{Discussion}\label{sec:discussion}
 
 \input{discussion}
+
+\section{Conclusion}\label{sec:conclusion}
+
+This study demonstrates that deep learning models can function as high-throughput instruments
+for quantifying morphological disparity. By extracting weights from a ResNet34 model trained
+on over 10,000 bird species, we established a high-dimensional morphospace that aligns with
+biological taxonomy and encodes evolutionary convergence,
+despite the model being trained on flat labels without \textit{a priori} taxonomic knowledge.
+
+Our investigation into the interpretability of these networks challenges the prevailing
+view that CNNs rely primarily on local textures. Through the use of adversarial examples
+and Grad-CAM analysis, we provide evidence that the model overcomes texture bias
+to learn holistic shape representations, effectively capturing the "body plan".
+
+In the context of macroevolution, our analysis reveals that species richness acts as the
+primary driver of morphospace expansion, a pattern consistent with the "niche filling" hypothesis.
+Furthermore, the disparity-through-time analysis uncovers a visual "early burst"
+following the K-Pg extinction, wherein avian lineages rapidly colonised approximately 50\% of
+the modern morphological disparity.
+
+This approach serves as a powerful, scalable new method for macroevolution.
+By synthesising computer vision with evolutionary biology,
+this "pan-phenomic" framework offers a novel perspective on the drivers of biodiversity,
+enabling the analysis of morphological evolution at a scale previously unattainable.
 
 \paragraph{Code and data accessibility}
 \begin{itemize}
