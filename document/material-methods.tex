@@ -46,7 +46,9 @@ connected layer (fc) of the ResNet34 model. Weights of each species were regarde
 512-dimensional vector representing the morphological traits. They are reduced to the
 lowest boundary that can explain 80\% of all variances for subsequent analyses.
 Gradient-weighted Class Activation Mapping (Grad-CAM,~\cite{Selvaraju2020Grad}) is
-employed to visualise
+employed to visualise the model's attention on images. We furtherly utilise aenerative adversarial
+examples with a semantic conflict between the object's body plan and feather texture,
+to evaluate the priority between texture versus shape.
 
 \subsection{Similarity clustering}\label{subsec:mm-similarity-clustering}
 

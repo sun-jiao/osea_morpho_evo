@@ -49,7 +49,7 @@ and Falconiformes share the raptorial facial characteristics like forward-facing
 \parencite{Fidler2004Convergent, Wu2021Genomic}.
 
 Other notable similarity exhibited in the clustering result includes
-Hirundinidae and Apodi（Apodidae and Hemiprocnidae) \parencite{Norberg1986Insectivorous},
+Hirundinidae and Apodi (Apodidae and Hemiprocnidae) \parencite{Norberg1986Insectivorous},
 Sphenisciformes (Penguins), Alcidae and Procellariiformes \parencite{Cody1973Coexistence},
 as well as Phaethontiformes, Suliformes, and Pelecanidae \parencite{Hedges1994Molecules}~\ldots~(\cref{fig:cluster})
 It's demonstrated that the feature vectors' distribution in morphological space is not
@@ -60,4 +60,80 @@ yet with higher throughput of data than classical taxonomy and morphometrics.
 This naturally creates a gap compared to molecular phylogenetic trees.
 The gap represents the disconnection between visual disparity and genetic distance.
 
-\section{Main drivers of diversification}\label{sec:main-drivers-of-diversification}
+\subsection{Shape vs Texture}\label{subsec:shape-vs-texture}
+
+Recent critiques in computer vision suggest that CNNs are biased towards
+textural features rather than the whole shapes \parencite{Geirhos2018ImagenetTrained}.
+However, the aforementioned discussion on the geometry of our model's morphospace implies
+that our model mainly focuses on the body plan rather than textures,
+challenge this assumption in the context of fine-grained visual classification.
+
+For instance, in the previously discussed phenotypic resemblances, Hirundinidae and Apodidae
+shares similar aerodynamic characteristics for the aerial insectivorous niche.
+The instance of Sphenisciformes, Alcidae, and Procellariiformes constitutes a more convincing argument.
+Penguins (Sphenisciformes) have highly specialised feathers, being extremely dense,
+thick, and visually scale-like \parencite{Williams2015Hidden}.
+Although \textcite{Williams2015Hidden} demonstrates that
+emperor penguins (\textit{Aptenodytes forsteri}) do have filoplumes and plumules,
+they are highly likely to be invisible in most images.
+While auks (Alcidae), albatrosses, petrels and shearwaters (Procellariiformes) have typical and normal feathers.
+If a model is textures biased, the three orders cannot be placed adjacently in the morphospace.
+
+This hypothesis is further supported by our Grad-CAM analysis (\cref{fig:gradcam}),
+which shows activation maps covering the entire avian body rather than specific patches.
+This indicates that our model are capable of capturing holistic representations,
+mirroring the concept of 'body plan' in biology.
+
+To test this hypothesis, we used Google Nano Banana (gemini-2.5-flash-image)
+to generate a penguin with typical feathers. Our model successfully classified this
+adversarial example as an Adélie penguin (\textit{Pygoscelis adeliae}) with the highest confidence,
+and the top-3 predictions are all penguins (\cref{fig:penguin}).
+This finding suggests that the feature vectors captured by our deep learning framework is biologically grounded.
+The model has learned knowledge on the macrostructure (body plan) rather than merely textures,
+thereby reinforcing the biological credibility of the subsequent morphological disparity analysis.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.35\textwidth]{chicken-plumaged-penguin}
+    \caption{The adversarial example of a chicken-plumaged penguin generated with Google Nano Banana.
+        It was cropped to the bird using Faster R-CNN, and then fed into the model.
+        Results are: Adélie penguin (\textit{Pygoscelis adeliae}) 36.51\%,
+        yellow-eyed penguin (\textit{Megadyptes antipodes}) 11.67\%, and
+        little penguin (\textit{Eudyptula minor}) 8.58\%.}
+    \label{fig:penguin}
+\end{figure}
+
+
+\subsection{Main drivers of diversification}\label{subsec:main-drivers-of-diversification}
+
+(Placeholder)
+
+\subsection{Macroevolution of birds}\label{subsec:macroevolution-of-birds}
+
+The disparity-through-time (DTT) analysis (\cref{fig:dtt}) shows that morphological
+disparity increased rapidly after the K-Pg mass extinction.
+This strongly supports \posscite{Simpson1944Tempo} adaptive radiation and the niche filling hypothesis.
+After mass extinctions vacated ecological niches,
+birds rapidly evolved extreme morphological diversity to occupy these positions.
+
+Traditional morphometrics typically selects only a few features (such as beak length and wingspan),
+potentially missing overall traits.
+Our method, however, is pan-phenomic, capturing holistic visual features.
+
+\subsection{Inspirations for further macroevolution studies}\label{subsec:inspirations-for-further-macroevolution-studies}
+
+Compared to traditional morphometric methods, our novel technique exhibits both advantages and disadvantages.
+The most significant benefit is the high-throughput, it provides higher dimensional data and may capture
+features hard to quantify in traditional geometric morphometrics. Additionally, this method is independent of
+specific anatomy of organisms, therefore being capable of studying the macroevolution of phenotypically distinct
+organisms, for instance, comparing the phenotypic disparity of animals, fungi, and plants.
+
+In contrast, the difficulty in aligning extinct species with extant birds highlights its limitations. This method also
+has difficulties in measuring inner structure of organisms. Moreover, dispite our previous discussion on the
+interpretability of models, this is still a major weakness of this novel method, especially compared to geometric
+methods. This also restricts its applicability in comparative studies on the difference between different body parts
+(mosaic evolution).
+
+Therefore, Our methodology is not a suppression or negation of the traditional methods. Rather, it serves as an
+important supplement to the traditional one. They can be incorporated and synthesised to provide more
+insights in the macroevolution of life.
