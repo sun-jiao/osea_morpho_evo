@@ -35,7 +35,7 @@
   {\multicitedelim}
   {\usebibmacro{postnote}}
 
-\title{Deep-learning-based pan-phenomic data reveals the explosive evolution of avian visual disparity}
+\title{A deep learning framework for morphological evolution studies, applied to avian evolution}
 
 \author[1,2]{Jiao Sun\orcidlink{0000-0002-5028-8132}}
 \affil[1]{Division of Ecology and Evolutionary Biology, School of Biological Science,
@@ -51,10 +51,21 @@
 
 \begin{abstract}
 The evolution of biological morphology is critical for understanding the
-diversity of the natural world, yet traditional analyses often
-involve subjective biases in the selection and coding of
-morphological traits. This study employs deep learning techniques,
-utilising a ResNet34 model capable of recognising over
+diversity of the natural world. However, traditional morphometrics analyses is often
+constrained by the methodological limitation that homologous landmarks are required in the selection and coding of
+morphological traits. This limitation makes it difficult to perform morphological analyses across highly divergent taxa, 
+such as inter-phylum or cross-kingdom comparisons, where homologous landmarks are absent. 
+To overcome this limitation, we propose a deep-learning-based framework that automatically captures the representation 
+of morphological traits without the need for prior anatomical labeling.
+
+This framework bridges deep representation learning and classical evolutionary models in mathematics. 
+We demonstrate that high-dimensional feature spaces encode the semantic information of organisms within angular directions, 
+meaning the deep visual morphospace functions as a curved Riemannian manifold (a unit hypersphere). 
+We mathematically generalise the foundational Felsenstein Phylogenetic Independent Contrasts (PIC) method from a Euclidean space 
+to operate upon a multidimensional hypersphere.
+
+To validate the feasibility of this proposed methodology, we analysed avian morphological evolution as a comprehensive validation case study. 
+This analysis employs deep learning techniques, utilising a ResNet34 model capable of recognising over
 10,000 bird species, to explore avian morphological evolution. We
 extract weights from the model's final fully connected (fc) layer
 and investigate the semantic alignment between the high-dimensional
@@ -63,21 +74,15 @@ demonstrate that the high-dimensional embedding space encodes phenotypic converg
 Subsequently, we assess the morphological disparity among various taxa and
 evaluate the association between morphological disparity and species richness,
 demonstrating that species richness is the primary driver of morphospace expansion.
-Moreover, the disparity-through-time analysis reveal a visual "early burst"
-after the K-Pg extinction.
+Moreover, the disparity-through-time analysis reveals a visual "early burst"
+after the K-Pg extinction. The conclusions of the above analyses are consistent with previous studies, 
+indicating that the proposed framework is a powerful tool for studying morphological evolution.
 
-While mainly aimed at evolutionary analysis, this study also provides
-insights into the interpretability of Deep Neural Networks. We demonstrate
-that hierarchical semantic structures (biological taxonomy) emerged in
-the high-dimensional embedding space despite being trained on flat labels.
-Furthermore, through adversarial examples, we provide evidence that our model
-in this task can overcome texture bias and learn holistic shape representations
-(body plans), challenging the prevailing view that CNNs rely primarily on local textures.
 \end{abstract}
 
 \addcontentsline{toc}{section}{Abstract}
 
-\paragraph{Keywords} bird biodiversity, deep learning, morphological evolution, interpretability, representation learning
+\paragraph{Keywords} biodiversity, deep learning, morphological evolution, representation learning
 
 \section{Introduction}\label{sec:introduction}
 
@@ -85,27 +90,27 @@ The evolution of biological morphology plays a crucial role in shaping
 the diverse natural world we observe today. It provides insight into
 the adaptation and survival of species over time, influencing various
 ecological interactions and the functioning of ecosystems.
-Traditionally, analyses of morphological evolution have involved
-subjective elements, as even quantitative analyses based on
-morphological traits require human intervention in the selection and
-coding of these traits \parencite{Guillerme2020Disparities}.
+Traditionally, analyses of morphological evolution require human intervention in
+the selection and coding of traits \parencite{Guillerme2020Disparities}.
 Additionally, many features, like complex feather textures exhibited
 in many taxa, are hard to measure and encode in traditional morphometrics.
 These issues can introduce biases, affecting the accuracy and
 reliability of evolutionary interpretations.
 
-To address these limitations, our research employs advanced deep
-learning technologies, specifically Convolutional Neural Networks
-(CNNs). CNNs, popularised by \textcite{LeCun1989Backpropagation},
+To address these limitations, we propose an advanced deep
+learning technology. Convolutional Neural Networks, 
+popularised by \textcite{LeCun1989Backpropagation},
 are designed to automatically learn visual features from image data,
 making them exceptionally suited for visual recognition tasks. By utilising
 CNN image classification models, we can leverage the learned weights
 as indicators of morphological traits of various species, providing a
 more objective basis for understanding biological evolution.
-
-In our study, we utilise CNNs as a high-throughput, high-dimensional
+It can serve as a high-throughput, high-dimensional
 morphometric tool capable of capturing holistic visual features, including colour,
-texture, and body plan. We trained a model being able to recognise over 10,000
+texture, and body plan. 
+
+To validate the feasibility of this proposed methodology, 
+we trained a model being able to recognise over 10,000
 species of birds, based on ResNet34 architecture \parencite{He2016ResNet},
 and calculated the cosine similarity between species using the weights
 extracted from the last fully connected layer (fc). This methodology
@@ -113,13 +118,13 @@ enabled us to perform phenotypic disparity and macroevolutionary analysis,
 yielding insights into the morphological evolution of birds.
 
 To avoid being confused with the taxonomic level "class," the term "category"
-is used as an alternative to the classes of neural networks.
+is used as an alternative to the "classes" of neural networks.
 
-\section{Material \& Methods}\label{sec:masterial-methods}
+\section{Methods}\label{sec:methods}
 
 \input{material-methods}
 
-\section{Results}\label{sec:results}
+\section{Application: Morphological Evolution of Birds}\label{sec:application}
 
 \input{results}
 

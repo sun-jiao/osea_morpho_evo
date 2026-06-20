@@ -1,4 +1,56 @@
-\subsection{Model training and its basic characteristics}\label{subsec:r-model}
+\subsection{Data processing}\label{subsec:mm-data-processing}
+
+In this study, we utilised the DongNiao International Birds 10000 Dataset (DIB-10K)
+by \textcite{Mei2020Dongniao}, which comprises over 4.8 million images representing
+10,922 bird species, following the IOC 10.1 taxonomy \parencite{Gill2021IOC}. This
+extensive dataset encompasses a wide variety of bird species, morphological variants,
+postures, and gestures \parencite{Mei2020Dongniao}. Despite their efforts in manual
+review and correction, the dataset contains numerous duplicate and erroneous images,
+necessitating a comprehensive data cleaning process.
+
+For the deduplication, we employed the pHash method to detect near-duplicate images
+by comparing these hashes \parencite{Farid2021Overview}. Duplicates spanning multiple
+categories are completely removed, and for intracategory duplicates, only one copy is
+retained in its category.
+
+To address erroneous images with non-avian subjects, we utilised the pretrained Faster
+Region-based Convolutional Neural Network (Faster R-CNN,~\cite{Ren2017Faster}) in
+the torchvision library \parencite{Ansel2024Pytorch}. For images where no birds were
+detected, we implemented a two-tiered approach: images from high-volume categories
+($\geq200$ images) were automatically deleted, while those from low-volume categories
+($<200$ images) were moved to a separate directory for manual inspection.
+After a manual thorough review, valid images were reintegrated into the dataset.
+
+\subsection{Model training}\label{subsec:mm-model-training}
+
+The task of recognising over 10,000 bird species is a
+fine-grained visual categorisation (FGVC) problem, where the goal is
+to identify minor differences between highly similar categories. To
+tackle this challenge, we adopted the MetaFGNet model proposed by \textcite{Zhang2018Fine},
+which is specifically designed for FGVC tasks. We utilised their
+pretrained weights "LBird-31\_checkpoint" as the foundation for
+transfer learning on the processed DIB-10K dataset. In the training process,
+all species are regarded as equal categories, without any \textit{a priori} taxonimic
+knowledge being introduced.
+
+For the training process, we employed a server equipped with an RTX 4090D
+GPU, 90GB of memory, and a 15-core
+Intel\textsuperscript{\textregistered} Xeon\textsuperscript{\textregistered}
+Platinum 8474C processor from the \href{https://www.autodl.com/docs/}{AutoDL platform}.
+This high-performance setup allowed for efficient processing and model training.
+The training procedure was conducted for 32 epochs.
+
+We reassigned the orders and families of all species (categories) to align with the
+IOC 15.1 \parencite{Gill2025IOC}. The weights are extracted from the final fully
+connected layer (fc) of the ResNet34 model. Weights of each species were regarded as a
+512-dimensional vector representing the morphological traits. They are reduced to the
+lowest boundary that can explain 80\% of all variances for subsequent analyses.
+Gradient-weighted Class Activation Mapping (Grad-CAM,~\cite{Selvaraju2020Grad}) is
+employed to visualise the model's attention on images. We furtherly utilise aenerative adversarial
+examples with a semantic conflict between the object's body plan and feather texture,
+to evaluate the priority between texture versus shape.
+
+\subsection{Model and its basic characteristics}\label{subsec:r-model}
 
 The model achieved 90.8\% accuracy on the training set and 87.6\% accuracy
 on the validation set. Grad-CAM reveals that the network's attention is focused
@@ -118,7 +170,7 @@ The disparity-through-time (DTT) analysis reveals an early-burst pattern for the
 avian visual morphospace. As shown in \cref{fig:dtt}, the empirical data of relative disparity
 deviates extremely from the expectation of Brownian Motion null simulation.
 
-Following the K-Pg mass extinction (\~66 Mya), the empirical disparity immediately increases
+Following the K-Pg mass extinction ($\sim 66$ Mya), the empirical disparity immediately increases
 at an intense rate. This curve is consistently higher than the mean null expectation throughout
 the Paleogene and Neogene, resulting in a positive Morphological Disparity Index (MDI).
 
@@ -136,3 +188,46 @@ the BM model requires significantly more time to reach the same disparity.
     the extant time (0 Mya). The K-Pg boundary (66 Mya) is marked as the red dash line.}
     \label{fig:dtt}
 \end{figure}
+
+\subsection{Macroevolution of birds}\label{subsec:macroevolution-of-birds}
+
+The Spearman's rank correlation demonstrates that species richness is the primary driver of morphospace expansion.
+The strong positive correlation between taxon size and hyperspherical variance (Orders: $\rho = 0.966$; Families: $\rho = 0.908$)
+confirms that as clades diversify, they tend to colonise a larger volume of the visual feature space.
+This pattern is consistent with the "niche filling" model \parencite{Simpson1944Tempo},
+where speciation events are often associated with the exploration of novel regions
+in the phenotypic landscape to minimise competition.
+However, this expansion exhibits diminishing returns (\cref{fig:models_comparison}),
+suggesting that the marginal gain in disparity decreases as taxa become extremely large.
+
+In contrast, structural heterogeneity appears to be constrained that is largely independent of diversity.
+At the order level, angle variance is statistically independent of clade size ($\rho=0.24,p>0.05$),
+and at the family level, the correlation is weak ($\rho=0.34$).
+This implies that even as a clade radiates swiftly, its internal geometric uniformity
+does not change chaotically but remains confined within a stable range.
+
+In the top-5 families with high disparity residuals, four of them are newly recognised based on
+molecular phylogeny, indicating that they exhibit greater heterogeneity than long-established taxa,
+which is why they remained unrecognised by zoologists for a long time.
+
+Vangidae is a textbook example of the radiation evolution.
+Although there aren't many species (39), they have evolved a variety of forms on Madagascar,
+ranging from shrike-like and flycatcher-like to finch-like species \parencite{Reddy2012Diversification, Jonsson2012Ecological}.
+The model captures this extreme morphological difference, producing a very high positive residual.
+
+Similarly, Cotingidae is given the seventh-highest disparity residual among families.
+Their differences in appearance are extremely eye-catching, ranging from the
+brightly coloured cocks-of-the-rock (\textit{Rupicola})
+to the relatively dull-coloured pihas (\textit{Lipaugus} and \textit{Snowornis}),
+with huge differences \parencite{Winkler2020Cotingas}.
+
+The disparity-through-time (DTT) analysis (\cref{fig:dtt}) exhibits a convex shape,
+suggesting that morphological disparity increased rapidly after the K-Pg mass extinction.
+This furtherly supports \posscite{Simpson1944Tempo} adaptive radiation and the niche filling hypothesis.
+After mass extinctions vacated ecological niches,
+birds rapidly evolved extreme morphological diversity to occupy these positions.
+The surviving avian lineages rapidly radiated to fill the ecological niches,
+establishing the major disparate body plans (visual morphotypes) within a short geological window.
+The positive Morphological Disparity Index (MDI), evidenced in \cref{fig:dtt},
+reinforces that the initial partitioning of the visual morphospace
+was significantly faster than neutral drift expectations.
