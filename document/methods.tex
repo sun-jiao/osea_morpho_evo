@@ -1,6 +1,39 @@
-\subsection{Similarity clustering}\label{subsec:mm-similarity-clustering}
+\subsection{Deep Representation Learning}\label{subsec:mm-deep-learning}
 
-Species similarity can be quantified using cosine similarity, implemented via
+Before calculating evolutionary disparities, it is necessary to project the raw visual semantics of organisms into a mathematically tractable morphological space. 
+We define a mapping function $f_\theta$ parameterised by a Convolutional Neural Network (CNN). 
+For a given image of an organism, the network directly processes the pixel matrix and extracts a high-dimensional feature vector from its final fully connected (fc) layer, bypassing the requirement for homologous anatomical coordinates.
+% The extracted vector is subsequently $L_2$-normalised. Every organism is mathematically represented as a unit vector $v$. 
+% This normalisation forces the deep visual morphospace to function geometrically as a unit hypersphere $\mathbb{S}^{D-1}$, 
+% where $D$ is the dimensionality of the feature space. Within this Riemannian manifold, semantic and morphological similarity is encoded in angular directions rather than spatial magnitudes.
+
+\subsection{Geometric Foundations of the Deep Morphospace}\label{subsec:mm-geometric-foundations}
+
+To employ classical macroevolutionary models (such as Brownian motion and Phylogenetic Independent Contrasts) 
+on feature representations extracted from deep neural networks, it is crucial to define the precise geometry of the underlying feature space. 
+As demonstrated by \textcite{Wang2017NormFace} in the context of hyperspherical embedding, the loss function with $L_2$ normalization forces 
+the network to minimize intra-class angular variance while maximizing inter-class angular disparity. 
+Consequently, the semantic and morphological information learned by the model is primarily encoded in the angular direction of the feature vectors, 
+rather than their Euclidean magnitudes.
+
+Mathematically, the $L_2$ normalisation maps any vector $\mathbf{x} \in \mathbb{R}^D$ onto a unit hypersphere $\mathbb{S}^{D-1}$, defined as:
+
+$$\mathbf{z} = \frac{\mathbf{x}}{\|\mathbf{x}\|_2}$$
+
+where $\|\mathbf{z}\|_2 = 1$. 
+Therefore, the deep visual morphospace in our framework does not function as a flat Euclidean space, 
+but rather as a curved Riemannian manifold -- specifically, a unit hypersphere. 
+The phenotypic distance between any two taxa $i$ and $j$ cannot be measured by Euclidean distance, which would violate the constraints of the surface topology. 
+Instead, it is quantified via the geodesic distance (the great-circle distance) or the angular separation $\theta_{ij}$, formulated as:
+
+$$\theta_{ij} = \arccos(\mathbf{z}_i \cdot \mathbf{z}_j)$$
+
+This hyperspherical formulation provides the theoretical and geometric justification for our subsequent developments in spherical 
+Ancestral State Reconstruction (ASR) and Riemannian Phylogenetic Independent Contrasts (PIC). 
+
+\subsection{Similarity and Disparity}\label{subsec:mm-similarity-clustering}
+
+According to the aforementioned geometric foundations, species similarity can be quantified using cosine similarity, implemented via
 dot product calculation of $L_2$-normalised vectors in PyTorch \parencite{Ansel2024Pytorch}.
 Next, we conducted agglomerative hierarchical clustering using the average
 linkage method to merge clusters. This was executed with the
@@ -10,7 +43,7 @@ clusters was output in Newick format, a widely used format in
 computational biology for tree structures. Finally, we utilised ETE3
 to export the clustering dendrogram in SVG format \parencite{Huerta2016ETE}.
 
-To analysing the clustering result, we applied a recursive top-down
+To analyse the clustering result, we applied a recursive top-down
 analysis to the tree, evaluating each internal node for taxonomic
 "purity." For a given node, we defined taxonomic purity as
 the proportion of the majority taxon. A node with a taxonomic
@@ -21,41 +54,11 @@ all species to identify and annotate taxonomical outliers, which belong
 to taxa that different from the majority taxon of this branch.
 Finally, we conducted manual review to confirm whether outliers had
 biological similarity with the majority taxa of their branches and
-what kinds of similarity do they have. The above pipeline was carried
-out in both order-level and family-level.
+what kinds of similarity do they have. 
+% The above pipeline was carried out in both order-level and family-level.
 
-\subsection{Disparity analysis}\label{subsec:mm-disparity-analysis}
-
-Before proceeding with this analysis, we removed 249 species whose weight
-vectors were identified as lacking biological significance during the
-manual review process. The specific reasons are detailed in the
-discussion section.
-
-Spherical vector variance of species is utilised to assess the morphological
-disparity among taxa. The Spearman's rank correlation was employed to examine
-the relationship between diversity (species richness) and morphological
-disparity (spherical variance), where taxa with $N<2$ were excluded. The Akaike
-information criterion (AIC) was employed to assess and compare four models:
-
-\begin{enumerate}
-    \item Power law: $f(x) = 1 - x^b$, the coefficient of $x^b$
-        is fixed as 1 to satisfy the boundary condition $f(1) = 0$,
-        reflecting the theoretical expectation;
-    \item Stretched exponential model: $f(x) = 1 - \exp(-\lambda \cdot (x - 1)^\beta)$;
-    \item Hill equation: $f(x) = \frac{(x - 1)^n}{k + (x - 1)^n}$;
-    \item Logarithmic rational model: $f(x) = \frac{\ln(x)}{k + \ln(x)}$.
-\end{enumerate}
-
-All analyses were conducted at both order and family levels. Subsequently, the residuals
-of the disparity of every taxon are calculated, five taxa with the highest and five with
-the lowest residuals are listed.
-
-Additionally, we explore the relationship between taxa size and mean pairwise angle,
-taxa size and pairwise angle variance, as well as mean pairwise angle and pairwise
-angle variance at both order and family levels. For size vs variance analysis,
-taxa with $N<3$ were excluded to avoid mathematical artefacts
-($\text{variance} = 0$ for $N=1 \text{or} 2$). For the other two analysis (mean angle),
-taxa with $N<2$ were excluded.
+Similarly, spherical vector variance of species is utilised to assess the morphological
+disparity among taxa. In the case study, we will examine the reliability of using spherical variance as a measure of morphological disparity.
 
 \subsection{Disparity through time}\label{subsec:mm-disparity-through-time}
 
@@ -66,10 +69,10 @@ is derived from the trait of the ancestral species through a random walk in Eucl
 The time of this walk is proportional to the divergence time, which is the branch length of
 the evolutionary tree.
 
-As demonstrated by \textcite{Wang2017NormFace}, in the last fully connected layer of CNNs,
-the semantic information is primarily encoded in the angular direction, which is equivalent
-to $L_2$ normalised vectors. Therefore, we assume that the feature vectors randomly walk on
-a unit hypersphere.
+% As demonstrated by \textcite{Wang2017NormFace}, in the last fully connected layer of CNNs,
+% the semantic information is primarily encoded in the angular direction, which is equivalent
+% to $L_2$ normalised vectors. Therefore, we assume that the feature vectors randomly walk on
+% a unit hypersphere.
 We implemented the algorithm for Spherical Ancestral State Reconstruction by modeling
 phenotypic evolution as Riemannian Brownian Motion on the hypersphere of
 the deep feature space in Python.
@@ -102,7 +105,7 @@ via the following steps \cref{fig:algorithm-asr}:
     \begin{equation}
         \text{Contrast}^2 = \underbrace{\frac{(\mathbf{v}_a - \mathbf{v}_b)^{\circ 2}}{l_a + l_b}}_{\text{Euclidean Variance}} \times \underbrace{\frac{\theta^2}{||\mathbf{v}_a - \mathbf{v}_b||^2}}_{\text{Correction Factor}}
     \end{equation}
-    where $\circ$ means Hadamard power (element-wise power).
+    where $\circ$ means Hadamard power (element-wise power). In standard Phylogenetic Comparative Methods (PCMs), the phenotypic distance between two states is measured as the linear chord length $||v_a - v_b||$. However, on a Riemannian manifold, the true evolutionary path follows the geodesic curve, with distance measured by the arc length $\theta$. For closely related species, the chord length approximates the arc length. However, for highly divergent taxa across deep evolutionary time, the linear chord length severely underestimates the true evolutionary distance. 
 
     \item When the traversal is completed, the estimated evolutionary rate of the whole tree is:
     \begin{equation}
@@ -112,7 +115,7 @@ via the following steps \cref{fig:algorithm-asr}:
 \end{enumerate}
 
 Once the whole ASR process is finished, the spherical variance for every time slice (1 ma) is calculated
-on the whole timetree, which represents the phenotypic disparity of all birds at the specific time.
+on the whole timetree, which represents the phenotypic disparity of all living branches at the specific time.
 Then, we conduct 100 times of null simulations based on Brownian motion model in preorder traversals.
 For every internal node, the feature vectors of its children are calculated
 according to the following algorithm (\cref{fig:algorithm-bm}):

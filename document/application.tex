@@ -1,6 +1,6 @@
 \subsection{Data processing}\label{subsec:mm-data-processing}
 
-In this study, we utilised the DongNiao International Birds 10000 Dataset (DIB-10K)
+In this case study, we utilised the DongNiao International Birds 10000 Dataset (DIB-10K)
 by \textcite{Mei2020Dongniao}, which comprises over 4.8 million images representing
 10,922 bird species, following the IOC 10.1 taxonomy \parencite{Gill2021IOC}. This
 extensive dataset encompasses a wide variety of bird species, morphological variants,
@@ -8,7 +8,7 @@ postures, and gestures \parencite{Mei2020Dongniao}. Despite their efforts in man
 review and correction, the dataset contains numerous duplicate and erroneous images,
 necessitating a comprehensive data cleaning process.
 
-For the deduplication, we employed the pHash method to detect near-duplicate images
+For the data cleaning, we employed the pHash method to detect near-duplicate images
 by comparing these hashes \parencite{Farid2021Overview}. Duplicates spanning multiple
 categories are completely removed, and for intracategory duplicates, only one copy is
 retained in its category.
@@ -21,7 +21,7 @@ detected, we implemented a two-tiered approach: images from high-volume categori
 ($<200$ images) were moved to a separate directory for manual inspection.
 After a manual thorough review, valid images were reintegrated into the dataset.
 
-\subsection{Model training}\label{subsec:mm-model-training}
+\subsection{Model and its basic characteristics}\label{subsec:r-model}
 
 The task of recognising over 10,000 bird species is a
 fine-grained visual categorisation (FGVC) problem, where the goal is
@@ -46,11 +46,7 @@ connected layer (fc) of the ResNet34 model. Weights of each species were regarde
 512-dimensional vector representing the morphological traits. They are reduced to the
 lowest boundary that can explain 80\% of all variances for subsequent analyses.
 Gradient-weighted Class Activation Mapping (Grad-CAM,~\cite{Selvaraju2020Grad}) is
-employed to visualise the model's attention on images. We furtherly utilise aenerative adversarial
-examples with a semantic conflict between the object's body plan and feather texture,
-to evaluate the priority between texture versus shape.
-
-\subsection{Model and its basic characteristics}\label{subsec:r-model}
+employed to visualise the model's attention on images.
 
 The model achieved 90.8\% accuracy on the training set and 87.6\% accuracy
 on the validation set. Grad-CAM reveals that the network's attention is focused
@@ -120,6 +116,31 @@ outlier species and 533 order-level outlier species (\cref{fig:cluster}).
 \end{figure}
 
 \subsection{Disparity analysis}\label{subsec:r-disparity-analysis}
+
+The Spearman's rank correlation was employed to examine
+the relationship between diversity (species richness) and morphological
+disparity (spherical variance), where taxa with $N<2$ were excluded. The Akaike
+information criterion (AIC) was employed to assess and compare four models:
+
+\begin{enumerate}
+    \item Power law: $f(x) = 1 - x^b$, the coefficient of $x^b$
+        is fixed as 1 to satisfy the boundary condition $f(1) = 0$,
+        reflecting the theoretical expectation;
+    \item Stretched exponential model: $f(x) = 1 - \exp(-\lambda \cdot (x - 1)^\beta)$;
+    \item Hill equation: $f(x) = \frac{(x - 1)^n}{k + (x - 1)^n}$;
+    \item Logarithmic rational model: $f(x) = \frac{\ln(x)}{k + \ln(x)}$.
+\end{enumerate}
+
+All analyses were conducted at both order and family levels. Subsequently, the residuals
+of the disparity of every taxon are calculated, five taxa with the highest and five with
+the lowest residuals are listed.
+
+Additionally, we explore the relationship between taxa size and mean pairwise angle,
+taxa size and pairwise angle variance, as well as mean pairwise angle and pairwise
+angle variance at both order and family levels. For size vs variance analysis,
+taxa with $N<3$ were excluded to avoid mathematical artefacts
+($\text{variance} = 0$ for $N=1 \text{or} 2$). For the other two analysis (mean angle),
+taxa with $N<2$ were excluded.
 
 Regarding the relationship between order-level disparity and diversity, the
 Spearman's coefficient is at 0.966, with a p-value of $1.45\times10^{-24}$.

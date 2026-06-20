@@ -103,22 +103,16 @@ mirroring the concept of 'body plan' in biology.
 %     \label{fig:penguin}
 % \end{figure}
 
+\subsection{Methodological Universality}\label{subsec:methodological-universality}
 
+The most disruptive and valuable advantage of this new methodology is its absolute, mathematical independence from organismal anatomy. Because the high-dimensional feature vectors are strictly mathematically derived from raw visual semantics rather than homologous, human-plotted anatomical coordinates, the framework exhibits universal applicability. Traditional geometric morphometrics cannot compare the evolutionary rate of an insect's structural adaptation against the co-evolutionary rate of the angiosperm flower it pollinates, because no homologous landmarks exist between a plant and an arthropod.
 
-\subsection{Inspirations for further macroevolution studies}\label{subsec:inspirations-for-further-macroevolution-studies}
+By stark contrast, the proposed deep learning framework can project entirely disparate phylogenetic trees, representing completely different kingdoms of life, into the exact same unified, high-dimensional embedding space. By mathematically calculating the hyperspherical volume occupied by varying phyla, researchers can now directly and seamlessly compare the macroevolutionary disparity of fungi against mammals, or track the co-evolutionary tempo of deeply intertwined but anatomically alien species. This capacity fundamentally alters the scope of comparative biology, decisively upgrading the discipline from narrow, restrictive intra-clade analyses to a unified, scalable quantification of global biodiversity.
 
-Compared to traditional morphometric methods, our novel technique exhibits both advantages and disadvantages.
-The most significant benefit is the high-throughput, it provides higher dimensional data and may capture
-features hard to quantify in traditional geometric morphometrics. Additionally, this method is independent of
-specific anatomy of organisms, therefore being capable of studying the macroevolution of phenotypically distinct
-organisms, for instance, comparing the phenotypic disparity among animals, fungi, and plants.
+\subsection{Limitations and Future Directions}\label{subsec:limitations-and-future-directions}
 
-In contrast, the difficulty in aligning extinct species with extant species highlights its limitations. This method also
-has difficulties in measuring inner structure of organisms. Moreover, despite our previous discussion on the
-interpretability of models, this is still a major weakness of this novel method, especially compared to geometric
-methods. This also restricts its applicability in comparative studies on the difference (mosaic evolution)
-between different body parts (e.g., beak vs. claw) or different geometrics (e.g., full length vs. weight).
+Despite its immense power to universally scale disparity analyses, the pan-phenomic framework operates under highly specific constraints that must be thoroughly acknowledged by researchers. The primary limitation involves a severe taphonomic disconnect between extant (living) and extinct (fossilized) lineages.
 
-Therefore, Our methodology is not a suppression or negation of the traditional methods. Rather, it serves as an
-important supplement to the traditional one. They can be incorporated and synthesised to provide more
-insights in the macroevolution of life.
+During the initial similarity clustering phases of the validation pipeline, several extinct species routinely clustered together into entirely non-biological, artificial groupings. This algorithmic error occurs because extinct organisms are overwhelmingly represented in datasets not through high-fidelity, living photography, but via fossilized skeletal remains, artistic museum reconstructions, or aged taxidermy. The deep network readily identifies these artificial or skeletal formats as distinct, dominating visual phenomena, mathematically severing the extinct species from their true, living evolutionary descendants based on medium rather than morphology. 
+
+Furthermore, the holistic, all-encompassing nature of the pan-phenomic approach inherently precludes the detailed analysis of mosaic evolution. Traditional geometric morphometrics retains one significant, unbeatable advantage: the ability to surgically isolate and analyze specific anatomical modules independently (e.g., separating the evolutionary rate of a finch's beak from the evolutionary rate of its wings). Because a CNN processes an organism as a unified, indivisible mathematical image matrix, the resulting 512-dimensional feature vector represents the aggregate state of the entire body. It is currently mathematically impossible to parse the resulting vector to determine which specific scalar values correspond to the beak versus the talons. Therefore, while this novel framework is entirely unparalleled for assessing overall structural macro-disparity across divergent phyla, it cannot replace classical morphometrics for highly localized, modular anatomical mechanics. Rather, it serves as a massive macro-scale expansion, meant to be utilized in synthesis with traditional, localized geometric techniques to provide unparalleled insights into the macroevolution of life.
