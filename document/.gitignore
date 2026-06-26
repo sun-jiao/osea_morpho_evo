@@ -7,3 +7,5 @@
 *.out
 *.log
 *.run.xml
+*.odt
+*.rds
