@@ -15,3 +15,5 @@ src/CombinedTrees
 *\aibrandcfg
 *.pdf
 *.pkl
+*.odt
+*.rds
