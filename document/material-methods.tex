@@ -1,8 +1,56 @@
-\subsection{Deep Representation Learning}\label{subsec:mm-deep-learning}
+\subsection{Data processing}\label{subsec:mm-data-processing}
 
-Before calculating evolutionary disparities, it is necessary to project the raw visual semantics of organisms into a mathematically tractable morphological space. 
-We define a mapping function $f_\theta$ parameterised by a Convolutional Neural Network (CNN). 
-For a given image of an organism, the network directly processes the pixel matrix and extracts a high-dimensional feature vector from its final fully connected (fc) layer, bypassing the requirement for homologous anatomical coordinates.
+In this case study, we utilised the DongNiao International Birds 10000 Dataset (DIB-10K)
+by \textcite{Mei2020Dongniao}, which comprises over 4.8 million images representing
+10,922 bird species, following the IOC 10.1 taxonomy \parencite{Gill2021IOC}. This
+extensive dataset encompasses a wide variety of bird species, morphological variants,
+postures, and gestures \parencite{Mei2020Dongniao}. Despite their efforts in manual
+review and correction, the dataset contains numerous duplicate and erroneous images,
+necessitating a comprehensive data cleaning process.
+
+For the data cleaning, we employed the pHash method to detect near-duplicate images
+by comparing these hashes \parencite{Farid2021Overview}. Duplicates spanning multiple
+categories are completely removed, and for intracategory duplicates, only one copy is
+retained in its category.
+
+To address erroneous images with non-avian subjects, we utilised the pretrained Faster
+Region-based Convolutional Neural Network (Faster R-CNN,~\cite{Ren2017Faster}) in
+the torchvision library \parencite{Ansel2024Pytorch}. For images where no birds were
+detected, we implemented a two-tiered approach: images from high-volume categories
+($\geq200$ images) were automatically deleted, while those from low-volume categories
+($<200$ images) were moved to a separate directory for manual inspection.
+After a manual thorough review, valid images were reintegrated into the dataset.
+
+\subsection{Model training}\label{subsec:mm-model-training}
+
+In this step, we project the raw visual semantics of organisms into a mathematically tractable morphological space. 
+We define a mapping function $f_\theta$ parameterised by a Convolutional Neural Network (CNN). For a given image of an organism, the network directly processes the pixel matrix and extracts a high-dimensional feature vector from its final fully connected (fc) layer, bypassing the requirement for homologous anatomical coordinates.
+
+The task of recognising over 10,000 bird species is a
+fine-grained visual categorisation (FGVC) problem, where the goal is
+to identify minor differences between highly similar categories. To
+tackle this challenge, we adopted the MetaFGNet model proposed by \textcite{Zhang2018Fine},
+which is specifically designed for FGVC tasks. We utilised their
+pretrained weights "LBird-31\_checkpoint" as the foundation for
+transfer learning on the processed DIB-10K dataset. In the training process,
+all species are regarded as equal categories, without any \textit{a priori} taxonimic
+knowledge being introduced.
+
+For the training process, we employed a server equipped with an RTX 4090D
+GPU, 90GB of memory, and a 15-core
+Intel\textsuperscript{\textregistered} Xeon\textsuperscript{\textregistered}
+Platinum 8474C processor from the \href{https://www.autodl.com/docs/}{AutoDL platform}.
+This high-performance setup allowed for efficient processing and model training.
+The training procedure was conducted for 32 epochs.
+
+We reassigned the orders and families of all species (categories) to align with the
+IOC 15.1 \parencite{Gill2025IOC}. The weights are extracted from the final fully
+connected layer (fc) of the ResNet34 model. Weights of each species were regarded as a
+512-dimensional vector representing the morphological traits. They are reduced to the
+lowest boundary that can explain 80\% of all variances for subsequent analyses.
+Gradient-weighted Class Activation Mapping (Grad-CAM,~\cite{Selvaraju2020Grad}) is
+employed to visualise the model's attention on images.
+
 % The extracted vector is subsequently $L_2$-normalised. Every organism is mathematically represented as a unit vector $v$. 
 % This normalisation forces the deep visual morphospace to function geometrically as a unit hypersphere $\mathbb{S}^{D-1}$, 
 % where $D$ is the dimensionality of the feature space. Within this Riemannian manifold, semantic and morphological similarity is encoded in angular directions rather than spatial magnitudes.
@@ -31,7 +79,7 @@ $$\theta_{ij} = \arccos(\mathbf{z}_i \cdot \mathbf{z}_j)$$
 This hyperspherical formulation provides the theoretical and geometric justification for our subsequent developments in spherical 
 Ancestral State Reconstruction (ASR) and Riemannian Phylogenetic Independent Contrasts (PIC). 
 
-\subsection{Similarity and Disparity}\label{subsec:mm-similarity-clustering}
+\subsection{Similarity clustering}\label{subsec:mm-similarity-clustering}
 
 According to the aforementioned geometric foundations, species similarity can be quantified using cosine similarity, implemented via
 dot product calculation of $L_2$-normalised vectors in PyTorch \parencite{Ansel2024Pytorch}.
@@ -48,8 +96,7 @@ analysis to the tree, evaluating each internal node for taxonomic
 "purity." For a given node, we defined taxonomic purity as
 the proportion of the majority taxon. A node with a taxonomic
 purity of more than 85\% was considered taxonomically consistent. For
-taxonomically consistent nodes, all of their child nodes were
-excluded from further checks. For such nodes, we further examined
+taxonomically consistent nodes, we further examine
 all species to identify and annotate taxonomical outliers, which belong
 to taxa that different from the majority taxon of this branch.
 Finally, we conducted manual review to confirm whether outliers had
@@ -57,8 +104,42 @@ biological similarity with the majority taxa of their branches and
 what kinds of similarity do they have. 
 % The above pipeline was carried out in both order-level and family-level.
 
-Similarly, spherical vector variance of species is utilised to assess the morphological
-disparity among taxa. In the case study, we will examine the reliability of using spherical variance as a measure of morphological disparity.
+\subsection{Disparity analysis}\label{subsec:mm-disparity-analysis}
+
+The Spearman's rank correlation was employed to examine
+the relationship between diversity (species richness) and morphological
+disparity (spherical variance), where taxa with $N<2$ were excluded. The Akaike
+information criterion (AIC) was employed to assess and compare four models:
+
+\begin{enumerate}
+    \item Power law: $f(x) = 1 - x^b$, the coefficient of $x^b$
+        is fixed as 1 to satisfy the boundary condition $f(1) = 0$,
+        reflecting the theoretical expectation;
+    \item Stretched exponential model: $f(x) = 1 - \exp(-\lambda \cdot (x - 1)^\beta)$;
+    \item Hill equation: $f(x) = \frac{(x - 1)^n}{k + (x - 1)^n}$;
+    \item Logarithmic rational model: $f(x) = \frac{\ln(x)}{k + \ln(x)}$.
+\end{enumerate}
+
+All analyses were conducted at both order and family levels. Subsequently, the residuals
+of the disparity of every taxon are calculated, five taxa with the highest and five with
+the lowest residuals are listed.
+
+Additionally, we explore the relationship between taxa size and mean pairwise angle,
+taxa size and pairwise angle variance, as well as mean pairwise angle and pairwise
+angle variance at both order and family levels. For size vs variance analysis,
+taxa with $N<3$ were excluded to avoid mathematical artefacts
+($\text{variance} = 0$ for $N=1 \text{or} 2$). For the other two analysis (mean angle),
+taxa with $N<2$ were excluded.
+
+\subsection{Phylogenetic tree}\label{subsec:mm-phylogenetic-tree}
+
+The phylogenetic tree used in this study was sourced from \textcite{Stiller2024Complexity}, which encompasses 198 species. The tree is ultrametric, with branch lengths representing divergence times in millions of years (Ma). We extracted a subset containing only the species present in \posscite{Stiller2024Complexity} tree for analyses involving phylogenetic comparative methods, ensuring a consistent set of taxa. 
+
+\subsection{Phylogenetic signal}\label{subsec:mm-phylogenetic-signal}
+
+We employed the R package geomorph to calculate the phylogenetic signal of the embedded vectors. It is represented by the multivariate Blomberg's $ K $ ($ K_{mult} $), being calculated using the geomorph::physignal function. The $ K_{mult} $ = 1 indicating similar levels of phylogenetic signal as expected under a Brownian motion model, $ K_{mult} $ < 1 indicating weaker phylogenetic signal, and $ K_{mult} $ > 1 indicating stronger phylogenetic signal than Brownian motion \parencite{adams2014generalized}. 
+
+The function geomorph::physignal applies Phylogenetically Aligned Component Analysis (PACA) on the provided morphological data. As noted by \textcite{collyer2021phylogenetically}, the number of variables have no significant effect on the estimation of phylogenetic signal. Therefore, the PCA results explaining 100\% variance (198 dimensions) were used for the calculation of phylogenetic signal. The significance of the phylogenetic signal was assessed using 999 permutations, where the species labels were randomly shuffled across the tips of the phylogeny to generate a null distribution of $ K_{mult} $ values.
 
 \subsection{Disparity through time}\label{subsec:mm-disparity-through-time}
 
@@ -149,5 +230,4 @@ When the whole traversal is finished, the ASR is conducted based on the simulati
 feature vectors of all modern species (leaf nodes) following the aforementioned algorithm,
 as well as the spherical variance for every time slice. Finally, the empirical disparity
 through time result and the mean disparity through time of all 100 times of null simulations
-are visualised and compared. The whole disparity-through-time analysis is conducted on the trees
-by \textcite{Stiller2024Complexity}.
+are visualised and compared. 

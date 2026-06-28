@@ -38,9 +38,12 @@
   {\multicitedelim}
   {\usebibmacro{postnote}}
 
-\title{A deep learning framework for morphological evolution studies, applied to avian evolution}
+\title{Representation learning provides a high-throughput framework for the morphological evolution of birds}
 
-\author{Anonymous Author}
+\author[1,2]{Jiao Sun\orcidlink{0000-0002-5028-8132}}
+\affil[1]{Division of Ecology and Evolutionary Biology, School of Biological Science, University of Reading, Whiteknights, Reading, RG6 6EX, United Kingdom}
+\affil[2]{CAS Key Laboratory of Plant Germplasm Enhancement and Specialty Agriculture, Wuhan Botanical Garden, Chinese Academy of Sciences, Wuhan 430074, China}
+\affil[ ]{\url{j.sun@pgr.reading.ac.uk}}
 
 \date{\today}
 
@@ -53,13 +56,11 @@
 \linenumbers
 
 \begin{abstract}
-\begin{enumerate}
-\item The evolution of biological morphology is critical for understanding global biodiversity. However, traditional geometric morphometrics analyses are constrained by the requirement of landmarks. 
-\item We propose a novel, scalable deep-learning-based framework that captures phenotypic representations from photos. The hyperspherical embedding with $L_2$ normalisation restricts the learned morphospace to a curved Riemannian manifold (a unit hypersphere). We generalise the Felsenstein's Phylogenetic Independent Contrasts (PIC) method from a Euclidean space to a unit hypersphere.
-\item To validate the feasibility of this methodology, we conducted a comprehensive case study on avian visual morphospace evolution, training a ResNet34 framework on over 10,000 bird species (4.8 million images). Multi-dimensional trait vectors were extracted from the model's final fully connected layer to compute hyperspherical disparity, agglomerative links, and ancestral state reconstructions.
-\item The validation pipeline successfully encoded phenotypic traits without a priori taxonomic or morphological knowledge. Spherical variance analysis proved that species richness acts as the primary driver of morphospace expansion. Furthermore, our generalised Riemannian PIC successfully recovered a visual "early burst" of intense disparity expansion immediately following the K-Pg mass extinction.
-\item The conclusions derived from the validation study are highly congruent with other macroevolutionary studies, demonstrating that our framework provides a novel high-throughput tool. 
-\end{enumerate}
+The evolution of biological morphology is critical for understanding global biodiversity. However, traditional geometric morphometrics analyses are constrained by the requirement of landmarks. 
+We propose a novel deep-learning-based framework that captures morphological representations from photos. The hyperspherical embedding with $L_2$ normalisation restricts the learned morphospace to a curved Riemannian manifold (a unit hypersphere). The Felsenstein's Phylogenetic Independent Contrasts (PIC) method are generalised from a Euclidean space to a unit hypersphere. a ResNet34 framework on over 10,000 bird species (4.8 million images)
+Multi-dimensional trait vectors were extracted from the model's final fully connected layer to compute hyperspherical disparity, agglomerative links, and ancestral state reconstructions.
+The validation pipeline successfully encoded morphological traits without a priori taxonomic or morphological knowledge. Spherical variance analysis proved that species richness acts as the primary driver of morphospace expansion. Furthermore, our generalised Riemannian PIC successfully recovered a visual "early burst" of intense disparity expansion immediately following the K-Pg mass extinction.
+The conclusions derived from the validation study are highly congruent with other macroevolutionary studies, demonstrating that our framework provides a novel high-throughput tool. 
 \end{abstract}
 
 \addcontentsline{toc}{section}{Abstract}
@@ -109,13 +110,13 @@ yielding insights into the morphological evolution of birds.
 % To avoid being confused with the taxonomic level "class," the term "category"
 % is used as an alternative to the "classes" of neural networks.
 
-\section{Methods}\label{sec:methods}
+\section{Material \& Methods}\label{sec:masterial-methods}
 
-\input{methods}
+\input{material-methods}
 
-\section{Case Study: Morphological Evolution of Birds}\label{sec:application}
+\section{Results}\label{sec:results}
 
-\input{application}
+\input{results}
 
 \section{Discussion}\label{sec:discussion}
 
@@ -147,11 +148,24 @@ enabling the analysis of morphological evolution at a scale previously unattaina
 
 \paragraph{Code and data accessibility}
 \begin{itemize}
-    \item Code for data processing: \url{https://anonymous.4open.science/r/osea-7357/}
-    \item Code for model training: \url{https://anonymous.4open.science/r/MetaFGNet-EB9A/}
-    \item Code for biological analysis: \url{https://anonymous.4open.science/r/osea_morpho_evo-DFBD/}
-    \item The model: \url{https://zenodo.org/records/20778980?token=eyJhbGciOiJIUzUxMiJ9.eyJpZCI6IjQ1OWIyN2VlLWUxYzgtNDgwOC1hYWY1LWJlNDg0MmQ2ZjI3OCIsImRhdGEiOnt9LCJyYW5kb20iOiI2Nzc0NzI3ZGE0NzJjNzE4ODViMjAwNWExYjQwMTk2NCJ9.-d1t1AWaagjrXelw21J2qz2ciIYXUAE64xbS5LcAAeKH09J5JqO3p3aVpMuPMckVYsNrMqRYFduoBNvNhckHRQ}
+    \item Code for data processing: \url{https://github.com/sun-jiao/osea}
+    \item Code for model training: \url{https://github.com/sun-jiao/MetaFGNet}
+    \item Code for biological analysis: \url{https://github.com/sun-jiao/osea_morpho_evo}
+    \item The model: \url{https://huggingface.co/sunjiao/osea}
 \end{itemize}
+
+
+\paragraph{Conflict of interests}
+
+The author has no conflict of interests.
+
+\paragraph{Author contribution statements}
+
+JS designed the project, programmed the python script and drafted the manuscript.
+
+\paragraph{Acknowledgements}
+
+JS is supported by Chinese Scholarship Council grant 202508420040. 
 
 \printbibliography
 
