@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
 
-data_dir = 'output_full_null'
+data_dir = 'output_one_fifth_null'
 data_type = 'interval' # 'num_slice'
-output_image_name = '../document/dtt_null_test_combined.pdf'
+output_image_name = '../document/dtt_null_test_combined-one_fifth.pdf'
 
 empirical_data = []
 null_data = []
@@ -116,7 +116,7 @@ plt.rcParams['font.size'] = 15
 plt.figure(figsize=(15, 10))
 
 # Null Range (grey shadow)
-# plt.fill_between(x_common, lower_null, upper_null, color='gray', alpha=0.3, label='95% Null Range')
+plt.fill_between(x_common, lower_null, upper_null, color='gray', alpha=0.3, label='95% Null Range')
 
 # Null Mean (grey line)
 plt.plot(x_common, mean_null, color='gray', linewidth=1.5, label='Mean Brownian Motion Simulation')

@@ -3,7 +3,7 @@ import csv
 import torch
 from torchvision.models import resnet34
 
-type = 'dimension' # 'species' 'dimension'
+type = 'species' # 'species' 'dimension'
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 

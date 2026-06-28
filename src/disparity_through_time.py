@@ -140,7 +140,10 @@ def create_trait_mapping(name_match_df, weights_df):
         label = str(row[0])
         if index != -1:
             if index < len(weights_df):
-                trait_map[label] = weights_df.iloc[index].values
+                if hasattr(weights_df, 'iloc'):
+                    trait_map[label] = weights_df.iloc[index].values
+                else:
+                    trait_map[label] = weights_df[index]
             else:
                 print(f"Warning: Index {index} is out of the range of vectors for label {label}.")
     return trait_map
@@ -512,21 +515,18 @@ MODE_PASSERINES = "passerines"
 MODE_NON_PASSERINES = "non_passerines"
 
 
-def main(tree_file, load_file=None, null_test=False, sample_ratio=100, mode=MODE_FULL):
+def main(tree_file, name_match_file, weights_file, load_file=None, null_test=False, sample_ratio=100, mode=MODE_FULL):
     # Sample_ratio only works when null_test is True,
     # because it will take a very long time to run null_test on all 10,000 trees
 
     base_filename = os.path.basename(tree_file)
 
-    name_match_file = "avian_timetree_name_match.csv"
-    pca_weights_file = "pca_weights.csv"
-
     # the relationship between labels in the tree and indexes of vectors
     name_match = read_csv(name_match_file)
     # read PCA reduced weights vectors
-    pca_weights = read_csv(pca_weights_file)
+    weights = read_csv(weights_file)
 
-    trait_mapping = create_trait_mapping(name_match, pca_weights)
+    trait_mapping = create_trait_mapping(name_match, weights)
 
     passerine_species = set()
     if mode in [MODE_PASSERINES, MODE_NON_PASSERINES]:
@@ -647,4 +647,4 @@ if __name__ == "__main__":
     #
     # for p in processes:
     #     p.join()
-    main("CombinedTrees/Avian-TimeTree.tre", null_test=True)
+    main("CombinedTrees/Avian-TimeTree.tre", "avian_timetree_name_match_trimmed.csv", "avian_timetree_one_fifth_species_pca_weights.csv", null_test=True, mode="one_fifth")

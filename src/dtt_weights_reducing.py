@@ -4,12 +4,22 @@ import torch
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize # 引入归一化工具
 from torchvision.models import resnet34
+from disparity_through_time import read_csv, create_trait_mapping
 
 TARGET_VARIANCE = 0.80
 MODEL_PATH = 'model20240824.pth'
 BIRD_INFO_PATH = "bird_info.csv"
-WEIGHTS_OUT_PATH = "all_weights.csv"
-PCA_OUTPUT_PATH = "pca_weights.csv"
+WEIGHTS_OUT_PATH = "avian_timetree_all_weights.csv"
+PCA_OUTPUT_PATH = "avian_timetree_pca_weights.csv"
+PCA_OUTPUT_PATH_95 = "avian_timetree_pca_weights_95.csv"
+PCA_OUTPUT_PATH_100 = "avian_timetree_pca_weights_100.csv"
+ONE_FIFTH_OF_SPECIES_PATH = "avian_timetree_one_fifth_species_pca_weights.csv"
+
+name_match_file = "avian_timetree_name_match.csv"
+new_name_match_file = "avian_timetree_name_match_trimmed.csv"
+
+# the relationship between labels in the tree and indexes of vectors
+name_match = read_csv(name_match_file)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -23,26 +33,36 @@ num_species = len(bird_info)
 print(f"Number of species: {num_species}")
 
 model = resnet34(num_classes=11000)
-model.load_state_dict(torch.load(MODEL_PATH, map_location=device)) # 增加 map_location 防止跨设备加载报错
+model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model = model.to(device)
 model.eval()
 
 raw_weights = model.fc.weight.data[:num_species].detach().cpu().numpy()
 print(f"Raw weights shape: {raw_weights.shape}")
 
-print(f"Saving to {WEIGHTS_OUT_PATH}...")
-with open(WEIGHTS_OUT_PATH, 'w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerows(raw_weights)
-
 # normalisation
 print("Applying Pre-Normalization (L2)...")
 weights_norm = normalize(raw_weights, norm='l2', axis=1)
 
+trait_mapping = create_trait_mapping(name_match, weights_norm)
+
+mapped_weights = np.array(list(trait_mapping.values()))
+mapped_labels = list(trait_mapping.keys())
+
+with open(new_name_match_file, mode='w', newline='', encoding='utf-8') as f:
+    writer = csv.writer(f)
+    for i, val in enumerate(mapped_labels):
+        writer.writerow([val, "empty", i])
+
+print(f"Saving to {WEIGHTS_OUT_PATH}...")
+with open(WEIGHTS_OUT_PATH, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(mapped_weights)
+
 print("Fitting PCA...")
 
 pca_full = PCA()
-pca_full.fit(weights_norm)
+pca_full.fit(mapped_weights)
 
 cumsum = np.cumsum(pca_full.explained_variance_ratio_)
 
@@ -57,7 +77,7 @@ print(f"Dimensions needed for 95% variance: {d_95}")
 print("-" * 30)
 
 pca_final = PCA(n_components=d_target)
-weights_pca = pca_final.fit_transform(weights_norm)
+weights_pca = pca_final.fit_transform(mapped_weights)
 
 # Re-normalisation after PCA
 print("Applying Post-Normalization (L2)...")
@@ -69,5 +89,38 @@ print(f"Saving to {PCA_OUTPUT_PATH}...")
 with open(PCA_OUTPUT_PATH, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerows(weights_final)
+
+dims = round(len(mapped_labels) / 5)
+pca_one_fifth = PCA(n_components=dims)
+weights_one_fifth = pca_one_fifth.fit_transform(mapped_weights)
+
+weights_one_fifth_final = normalize(weights_one_fifth, norm='l2', axis=1)
+
+print(f"Final weights shape for one-fifth of species: {weights_one_fifth_final.shape}")
+
+print(f"Saving to {ONE_FIFTH_OF_SPECIES_PATH}...")
+with open(ONE_FIFTH_OF_SPECIES_PATH, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(weights_one_fifth_final)
+
+pca_final_95 = PCA(n_components=d_95)
+weights_pca_95 = pca_final_95.fit_transform(mapped_weights)
+weights_pca_95_final = normalize(weights_pca_95, norm='l2', axis=1)
+print(f"Final weights shape for 95% variance: {weights_pca_95_final.shape}")
+
+print(f"Saving to {PCA_OUTPUT_PATH_95}...")
+with open(PCA_OUTPUT_PATH_95, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(weights_pca_95_final)
+
+pca_final_100 = PCA(n_components=len(cumsum))
+weights_pca_100 = pca_final_100.fit_transform(mapped_weights)
+weights_pca_100_final = normalize(weights_pca_100, norm='l2', axis=1)
+print(f"Final weights shape for 100% variance: {weights_pca_100_final.shape}")
+
+print(f"Saving to {PCA_OUTPUT_PATH_100}...")
+with open(PCA_OUTPUT_PATH_100, 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(weights_pca_100_final)
 
 print("Done.")

@@ -5,7 +5,7 @@ from scipy.cluster import hierarchy
 from scipy.cluster.hierarchy import to_tree
 from scipy.spatial.distance import squareform
 
-type = 'dimension' # 'species' 'dimension'
+type = 'species' # 'species' 'dimension'
 
 filename = f"class_similarity-{type}.csv"
 

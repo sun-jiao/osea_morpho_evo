@@ -17,3 +17,5 @@ src/CombinedTrees
 *.pkl
 *.odt
 *.rds
+*.pyc
+*.log
