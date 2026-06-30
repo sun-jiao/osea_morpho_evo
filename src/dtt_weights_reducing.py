@@ -123,4 +123,10 @@ with open(PCA_OUTPUT_PATH_100, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerows(weights_pca_100_final)
 
+projection_matrix = pca_final_100.components_.T  
+data_mean = pca_final_100.mean_
+
+np.save('pca_final_100_projection_matrix.npy', projection_matrix)
+np.save('pca_final_100_data_mean.npy', data_mean)
+
 print("Done.")

@@ -207,9 +207,9 @@ run_multivariate_K <- function(tree_file,
     k_df$K,
     type = "l",
     lwd = 2,
-    xlab = "PCA / PACA Axis",
+    xlab = "PACA Axis",
     ylab = "Blomberg's K",
-    main = "Phylogenetic Signal per PCA Axis (K by axis)"
+    main = "Phylogenetic Signal per PACA Axis (K by axis)"
   )
 
   points(k_df$Axis, k_df$K, pch = 16, cex = 0.5)

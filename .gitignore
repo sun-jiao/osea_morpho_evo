@@ -19,3 +19,5 @@ src/CombinedTrees
 *.rds
 *.pyc
 *.log
+*.feather
+*.npy
