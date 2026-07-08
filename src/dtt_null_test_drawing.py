@@ -3,9 +3,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
 
-data_dir = 'output_one_fifth_null'
+data_dir = 'output_pca_top_5_null'
 data_type = 'interval' # 'num_slice'
-output_image_name = '../document/dtt_null_test_combined-one_fifth.pdf'
+output_image_name = '../document/dtt_null_test_combined-pca_top_5.pdf'
 
 empirical_data = []
 null_data = []

@@ -510,29 +510,43 @@ def compute_dtt_time_slices(tree, num_slices=None, interval=None):
 # ---------------------------
 # Main function
 # ---------------------------
-MODE_FULL = "full"
-MODE_PASSERINES = "passerines"
-MODE_NON_PASSERINES = "non_passerines"
 
 
-def main(tree_file, name_match_file, weights_file, load_file=None, null_test=False, sample_ratio=100, mode=MODE_FULL):
+def main(tree_file, name_match_file, weights_file, load_file=None, null_test=False, sample_ratio=100, mode = "csv", run_name="full", trait_slice=None):
     # Sample_ratio only works when null_test is True,
     # because it will take a very long time to run null_test on all 10,000 trees
 
     base_filename = os.path.basename(tree_file)
 
-    # the relationship between labels in the tree and indexes of vectors
-    name_match = read_csv(name_match_file)
-    # read PCA reduced weights vectors
-    weights = read_csv(weights_file)
+    if mode == "csv":
+        # the relationship between labels in the tree and indexes of vectors
+        name_match = read_csv(name_match_file)
+        # read PCA reduced weights vectors
+        weights = read_csv(weights_file)
+        trait_mapping = create_trait_mapping(name_match, weights)
+    elif mode == "feather":
+        if name_match_file != weights_file:
+            raise ValueError("For feather mode, name_match_file and weights_file must be the same file.")
+        data = pd.read_feather(name_match_file)
+        data.set_index("Species", inplace=True)
 
-    trait_mapping = create_trait_mapping(name_match, weights)
+        trait_mapping = {
+            idx: row
+            for idx, row in zip(data.index, data.to_numpy())
+        }
+    else:
+        raise ValueError("Mode must be either 'csv' or 'feather'.")
 
-    passerine_species = set()
-    if mode in [MODE_PASSERINES, MODE_NON_PASSERINES]:
-        passerine_species = get_species_by_group("bird_info.csv", "PASSERIFORMES", level='order')
+    if trait_slice is not None:
+        if isinstance(trait_slice, slice):
+            trait_mapping = {
+                idx: row[trait_slice]
+                for idx, row in trait_mapping.items()
+            }
+        else:
+            raise ValueError("Slice must be a list or tuple of two integers.")
 
-    output_dir = f'output_{mode}' if not null_test else f'output_{mode}_null'
+    output_dir = f'output_{run_name}' if not null_test else f'output_{run_name}_null'
     os.makedirs(output_dir, exist_ok=True)
 
     start = time.time()
@@ -550,7 +564,7 @@ def main(tree_file, name_match_file, weights_file, load_file=None, null_test=Fal
         rand_num = 1  # fixed number for outlier SC test
         # rand_num = np.random.randint(0, sample_ratio)
     else:
-        out_path = f'{output_dir}/disparity_through_time-{mode}_{base_filename}-{start:.0f}.csv'
+        out_path = f'{output_dir}/disparity_through_time-{run_name}_{base_filename}-{start:.0f}.csv'
         out_file = open(out_path, 'a')
         writer = csv.writer(out_file)
 
@@ -575,17 +589,6 @@ def main(tree_file, name_match_file, weights_file, load_file=None, null_test=Fal
         if tree_format == "newick":
             tree_item = tree_item.strip()
             tree_item = read_phylogenetic_trees(tree_item)
-
-        if mode == MODE_PASSERINES:
-            tree_item = extract_subclade(tree_item, passerine_species)
-            if tree_item is None:
-                print(f"Tree {i} has insufficient Passerines.")
-                continue
-        elif mode == MODE_NON_PASSERINES:
-            tree_item = prune_subclade(tree_item, passerine_species)
-            if tree_item is None:
-                print(f"Tree {i} has insufficient Non-Passerines.")
-                continue
 
         pre_process(tree_item, trait_mapping)
 
@@ -622,7 +625,7 @@ def main(tree_file, name_match_file, weights_file, load_file=None, null_test=Fal
                 print(f"[{base_filename}] It took {(time.time() - start):.2f} seconds to process {j + 1} times "
                       f"null test in the {i + 1}th tree!")
 
-        print(f"[{base_filename} - {mode}] It took {(time.time() - start):.2f} seconds to process {i + 1} trees!")
+        print(f"[{base_filename} - {run_name}] It took {(time.time() - start):.2f} seconds to process {i + 1} trees!")
 
         if null_test:
             out_file.close()
@@ -647,4 +650,5 @@ if __name__ == "__main__":
     #
     # for p in processes:
     #     p.join()
-    main("CombinedTrees/Avian-TimeTree.tre", "avian_timetree_name_match_trimmed.csv", "avian_timetree_one_fifth_species_pca_weights.csv", null_test=True, mode="one_fifth")
+    main("CombinedTrees/Avian-TimeTree.tre", "avian_timetree_name_match_trimmed.csv", "avian_timetree_one_fifth_species_pca_weights.csv", null_test=True, run_name="pca_top_5", trait_slice=slice(0, 5)) 
+    # main("CombinedTrees/Avian-TimeTree.tre", "PACA_x.feather", "PACA_x.feather", null_test=True, run_name="paca_exclude_top_20", mode="feather", trait_slice=slice(20, None)) 

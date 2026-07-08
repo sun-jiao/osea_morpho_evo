@@ -60,10 +60,18 @@ weights_norm = normalize(raw_weights, norm='l2', axis=1)
 # PACA rotation matrix
 w_paca_df = pd.read_feather("PACA_rot.feather")
 w_paca = w_paca_df.to_numpy()
+mean_paca_df = pd.read_feather("PACA_center.feather")
+mean_paca = mean_paca_df.to_numpy().flatten()
 
 # PCA projection matrix
 w_pca = np.load('pca_final_100_projection_matrix.npy')
-# mean_pca = np.load('pca_final_100_data_mean.npy')
+mean_pca = np.load('pca_final_100_data_mean.npy')
+
+x_pca_centered = weights_norm - mean_pca
+x_pca = x_pca_centered @ w_pca 
+x_paca_centered = x_pca - mean_paca
+x_paca = x_paca_centered @ w_paca
+x_paca_final = normalize(x_paca, norm='l2', axis=1)
 
 w_combined = np.dot(w_pca, w_paca)
 
