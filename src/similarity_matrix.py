@@ -1,5 +1,3 @@
-import csv
-
 import pandas as pd
 import numpy as np
 import torch
@@ -7,7 +5,6 @@ from torchvision.models import resnet34
 from sklearn.preprocessing import normalize
 
 run_type = 'paca'
-
 
 MODEL_PATH = 'model20240824.pth'
 BIRD_INFO_PATH = "bird_info.csv"
@@ -22,7 +19,6 @@ model.eval()
 
 bird_info = pd.read_csv(BIRD_INFO_PATH, header=None).values
 num_species = len(bird_info)
-
 
 raw_weights = model.fc.weight.data[:num_species].detach().cpu().numpy()
 weights_norm = normalize(raw_weights, norm='l2', axis=1)
@@ -57,8 +53,5 @@ similarity_matrix = similarity_matrix.float()
 similarity_matrix.fill_diagonal_(1.0)
 similarity_np = similarity_matrix.cpu().numpy()
 
-with open(f"class_similarity-{run_type}.csv", "w", newline="") as f:
-    writer = csv.writer(f)
-    writer.writerow(["Class"] + [str(i) for i in range(num_species)])
-    for i in range(num_species):
-        writer.writerow([i] + similarity_np[i].tolist())
+result_df = pd.DataFrame(similarity_np)
+result_df.to_feather(f"class_similarity-{run_type}.feather")

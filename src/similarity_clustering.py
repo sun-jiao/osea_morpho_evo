@@ -1,37 +1,23 @@
-import csv
-
+import pandas as pd
 import numpy as np
 from scipy.cluster import hierarchy
 from scipy.cluster.hierarchy import to_tree
 from scipy.spatial.distance import squareform
 
 type = 'species' # 'species' 'dimension'
+BIRD_INFO_PATH = "bird_info.csv"
 
-filename = f"class_similarity-{type}.csv"
+filename = f"class_similarity-{type}.feather"
 
-similarity_matrix = np.loadtxt(
-    filename,
-    delimiter=',',
-    skiprows=1,          # skip the frist row
-    usecols=range(1, len(open(filename).readline().split(','))))  # skip the first column
+df = pd.read_feather(filename)
 
-if type == 'species':
-    bird_info = []
-    with open("bird_info.csv", 'r') as f:
-        reader = csv.reader(f)
-        for row in reader:
-            bird_info.append(row)
+similarity_matrix = df.to_numpy()
 
-    num_species = len(bird_info)
+bird_info = pd.read_csv(BIRD_INFO_PATH, header=None).values
 
-    labels = [f"{i}_{bird_info[i][2]}_{bird_info[i][0]}".replace(' ', '_') for i in range(num_species)]
-elif type == 'dimension':
-    # calculate the correlation of dimensions
-    labels = [str(i) for i in list(range(512))]
-    # 1 - |corr|
-    similarity_matrix = np.abs(similarity_matrix)
-else:
-    raise ValueError
+num_species = len(bird_info)
+
+labels = [f"{i}_{bird_info[i][2]}_{bird_info[i][0]}".replace(' ', '_') for i in range(num_species)]
 
 # reduced_matrix = similarity_matrix[:num_species, :num_species]
 distance_matrix = 1 - similarity_matrix
