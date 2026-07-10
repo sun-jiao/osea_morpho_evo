@@ -4,8 +4,9 @@ from scipy.cluster import hierarchy
 from scipy.cluster.hierarchy import to_tree
 from scipy.spatial.distance import squareform
 
-type = 'species' # 'species' 'dimension'
+type = 'paca' # 'species' 'dimension'
 BIRD_INFO_PATH = "bird_info.csv"
+TOP_DIMS = 20
 
 filename = f"class_similarity-{type}.feather"
 

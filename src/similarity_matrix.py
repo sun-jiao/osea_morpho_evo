@@ -39,10 +39,10 @@ if run_type == 'paca':
     x_paca_centered = x_pca - mean_paca
     x_paca = x_paca_centered @ w_paca
     final_weights = normalize(x_paca, norm='l2', axis=1)
-elif run_type == 'species':
+elif run_type == 'original':
     final_weights = weights_norm
 else:
-    raise ValueError("Invalid type. Must be 'species' or 'paca'.")
+    raise ValueError("Invalid type. Must be 'original' or 'paca'.")
 
 final_weights = np.asanyarray(final_weights)
 similarity_matrix = np.dot(final_weights, final_weights.T)
