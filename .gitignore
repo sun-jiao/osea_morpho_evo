@@ -21,3 +21,4 @@ src/CombinedTrees
 *.log
 *.feather
 *.npy
+/src/ELEData/
