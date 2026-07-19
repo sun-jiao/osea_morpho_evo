@@ -141,6 +141,8 @@ We employed the R package geomorph to calculate the phylogenetic signal of the e
 
 The function geomorph::physignal applies Phylogenetically Aligned Component Analysis (PACA) on the provided morphological data. As noted by \textcite{collyer2021phylogenetically}, the number of variables have no significant effect on the estimation of phylogenetic signal. Therefore, the PCA results explaining 100\% variance (198 dimensions) were used for the calculation of phylogenetic signal. The significance of the phylogenetic signal was assessed using 999 permutations, where the species labels were randomly shuffled across the tips of the phylogenetic tree to generate a null distribution of $ K_{mult} $ values.
 
+Furthermore, we calculated the correlation between the Phylogenetically Aligned Components (PACs) and AVONET traits \parencite{tobias2022avonet}. Correlation analyses were conducted using the stats.pearsonr and stats.kruskal functions from the SciPy package \parencite{Gommers2025Scipy}. Pearson correlation was applied to evaluate the relationship between continuous traits and PACs, while the Kruskal-Wallis test was used for categorical traits, with the effect size subsequently quantified as Eta-squared ($\eta^2_H$). To ensure comparability across different trait types, the Pearson coefficient of determination ($R^2$) was used instead of the correlation coefficient ($r$), aligning both metrics to represent the proportion of explained variance. The correlation results were visualised as heatmaps using the seaborn package \parencite{Waskom2021Seaborn}.
+
 \subsection{Disparity through time}\label{subsec:mm-disparity-through-time}
 
 In classical phylogenetic independent contrast (PIC) proposed by

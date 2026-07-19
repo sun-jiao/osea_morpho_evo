@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 import torch
 from torchvision.models import resnet34
-from sklearn.preprocessing import normalize
-from scipy.stats import pearsonr, spearmanr, kruskal
+from sklearn.preprocessing import normalize  #scikit-learn
+from scipy.stats import pearsonr, kruskal
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -14,7 +14,7 @@ AVONET_TRAITS_PATH = "ELEData/TraitData/AVONET3_BirdTree.xlsx"
 NUMERIC_TRAIT_LABELS = [
     "Beak.Length_Culmen", "Beak.Length_Nares", "Beak.Width", "Beak.Depth", "Tarsus.Length", "Wing.Length", "Kipps.Distance", "Secondary1", "Hand-Wing.Index", "Tail.Length", "Mass"
 ]
-ENUMERATED_TRAIT_LABELS = [
+CATEGORICAL_TRAIT_LABELS = [
     "Habitat", "Migration", "Trophic.Level", "Trophic.Niche", "Primary.Lifestyle"
 ]
 
@@ -80,14 +80,14 @@ avonet_data = avonet_data.drop(columns=['B_index'])
 
 num_dims = len(paca_x.columns)
 
-all_traits = NUMERIC_TRAIT_LABELS + ENUMERATED_TRAIT_LABELS
+all_traits = NUMERIC_TRAIT_LABELS + CATEGORICAL_TRAIT_LABELS
 pac_labels = [i+1 for i in range(num_dims)]
 
 # Initialize an empty DataFrame to store correlation values
 # Default fill with NaN, so that cells with p > 0.05 will naturally
 # remain blank in the heatmap
 heatmap_data_numeric = pd.DataFrame(index=NUMERIC_TRAIT_LABELS, columns=pac_labels, dtype=float)
-heatmap_data_enum = pd.DataFrame(index=ENUMERATED_TRAIT_LABELS, columns=pac_labels, dtype=float)
+heatmap_data_enum = pd.DataFrame(index=CATEGORICAL_TRAIT_LABELS, columns=pac_labels, dtype=float)
 
 for i in range(num_dims):
     # print(f"\n=== PACA {i+1} ===")
@@ -122,19 +122,19 @@ for i in range(num_dims):
     score_mapping = {bird_info[idx][2]: scores_all[idx] for idx in range(num_species)}
     avonet_data['Current_Score'] = avonet_data.index.map(score_mapping)
     
-    # print("\n=== Numeric Traits Correlation (Spearman) ===-")
+    # print("\n=== Numeric Traits Correlation (pearsonr) ===-")
     for item in NUMERIC_TRAIT_LABELS:
         # drop NaN rows
         valid_data = avonet_data[['Current_Score', item]].dropna()
         if len(valid_data) > 2:
-            rho_num, p_num = spearmanr(valid_data['Current_Score'], valid_data[item])
+            rho_num, p_num = pearsonr(valid_data['Current_Score'], valid_data[item])
             rho_num_squared = rho_num ** 2
             # print(f"  {item:20s}: rho^2 = {rho_num_squared:>7.4f}, p-value = {p_num:.4g}, n = {len(valid_data)}")
             if p_num <= 0.05:
                 heatmap_data_numeric.at[item, i + 1] = rho_num_squared
             
-    # print("\n=== Enumerated Traits Analysis (Kruskal-Wallis & Eta-squared) ===")
-    for item in ENUMERATED_TRAIT_LABELS:
+    # print("\n=== Categorical Traits Analysis (Kruskal-Wallis & Eta-squared) ===")
+    for item in CATEGORICAL_TRAIT_LABELS:
         # drop NaN rows
         valid_data = avonet_data[['Current_Score', item]].dropna()
         
@@ -153,12 +153,26 @@ for i in range(num_dims):
             # print(f"  {item:20s}: H-stat = {h_stat:>8.4f}, p-value = {p_cat:.4g}, Eta-squared = {eta_sq:.4f}, n = {n}")
 
             if p_cat <= 0.05:
-                heatmap_data_enum.at[item, i + 1] = sqrt(eta_sq)
+                heatmap_data_enum.at[item, i + 1] = eta_sq
 
     avonet_data = avonet_data.drop(columns=['Current_Score'])
 
+result = pd.DataFrame({
+    "max_value": heatmap_data_numeric.max(axis=1),
+    "max_position": heatmap_data_numeric.idxmax(axis=1)
+})
+
+result_enum = pd.DataFrame({
+    "max_value": heatmap_data_enum.max(axis=1),
+    "max_position": heatmap_data_enum.idxmax(axis=1)
+})
+
+print(result)
+print(result_enum)
+exit()
+
 fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(8 + num_dims * 0.05, 6 + len(all_traits) * 0.25), sharex=True,
-    gridspec_kw={"height_ratios": [len(NUMERIC_TRAIT_LABELS), len(ENUMERATED_TRAIT_LABELS)]},
+    gridspec_kw={"height_ratios": [len(NUMERIC_TRAIT_LABELS), len(CATEGORICAL_TRAIT_LABELS)]},
 )
 
 sns.heatmap(heatmap_data_numeric, 
@@ -166,7 +180,7 @@ sns.heatmap(heatmap_data_numeric,
             annot=False,
             fmt=".3f",
             cmap="YlOrRd",
-            cbar_kws={'label': 'Correlation (|ρ|)'},
+            cbar_kws={'label': 'Pearson\'s R²'},
             mask=heatmap_data_numeric.isnull(),
             linewidths=0.5,
             linecolor='lightgray')
@@ -178,12 +192,12 @@ sns.heatmap(heatmap_data_enum,
             annot=False,
             fmt=".3f",
             cmap="YlOrRd",
-            cbar_kws={'label': 'Correlation (η)'},
+            cbar_kws={'label': 'η² based on the Kruskal-Wallis H-statistic'},
             mask=heatmap_data_enum.isnull(),
             linewidths=0.5,
             linecolor='lightgray')
 
-ax2.set_ylabel("AVONET Traits (Enumerated)", fontsize=12, fontweight='bold')
+ax2.set_ylabel("AVONET Traits (Categorical)", fontsize=12, fontweight='bold')
 ax2.set_xlabel("PACA Dimensions", fontsize=12, fontweight='bold')
 
 ax1.tick_params(axis="x", which="both", bottom=False, top=False, labelbottom=False)
@@ -191,5 +205,5 @@ fig.suptitle('Trait Correlations across PACA Dimensions\n(Blank cells indicate p
           fontsize=14, fontweight='bold')
 
 plt.tight_layout()
-plt.savefig('trait_correlation_heatmap.png', dpi=300)
+plt.savefig('../document/trait_correlation_heatmap.pdf', dpi=300)
 # plt.show()

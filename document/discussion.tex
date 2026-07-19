@@ -60,11 +60,35 @@ yet with higher throughput of data than classical taxonomy and morphometrics.
 This naturally creates a gap compared to molecular phylogenetic trees.
 The gap represents the disconnection between visual disparity and genetic distance.
 
-% \subsection{Shape vs Texture}\label{subsec:shape-vs-texture}
+\subsection{The implications of the phylogenetic signals}\label{subsect:phylosignal-discussion}
+
+In the phylogenetic signal analysis, the value $K_{mult} < 1$ indicates that the overall phylogenetic signal is lower than expected under Brownian motion.
+The embedding space has moderate phylogenetic signal, which is not random with respect to phylogeny.
+This confirms that the CNN embedding is phylogenetically structured globally, and the phylogenetic constraints shaped the bird visual morphospace.
+While it furthermore indicates that the lineage divergence is also coupled with convergent evolution and plasticity. 
+
+The univariate $K$ value of the first PAC demonstrates that the primary axis of visual variation is strongly constrained by shared ancestry. 
+Phylogenetically close species are twice as similar along this axis as would be expected under neutral evolution. 
+The empirical value exceeds the permutation maximum by a factor of about 1.56 times, which is a very unlikely result under the null hypothesis. 
+This indicates that visual deep learning on natural organisms can recover authentic evolutionary structure, and distinguish between convergent and divergent evolution.
+
+As shown in \cref{fig:paca-avonet,tab:paca-avonet}, the leftmost columns (dimensions 1--10) show the darkest colours (highest $R^2$/$\eta^2$), indicating that the first few PACA components -- those with the strongest phylogenetic signal -- correlate most strongly with nearly all AVONET traits. This means that the CNN has learned features that implicitly reflect evolutionary relationships, with the most phylogenetically-structured dimensions encoding the most biologically meaningful information. 
+
+Combined with the aforementioned qualitative analysis of visual phenotypic similarity, it is evident that the CNN embedding space is not only mathematically structured, but also biologically meaningful. The model has learned to encode visual features that are both phylogenetically informative and ecologically relevant, capturing the complex interplay between morphology, function, and evolutionary history. 
+
+Furthermore, the model has captured both homologous and convergent traits and disentangled them from each other. 
+If homologous and convergent traits were entangled, we would expect K values to be more uniform across all axes, no significant gradients, as we see in the permutation test. Instead, the first few PACs show significantly stronger phylogenetic signal, indicating that the model has learned to separate traits that are conserved across lineages from those that have evolved convergently. 
+
+Additionally, if a CNN trained on photographs recovers this structure, it implies that the structure exists in the phenotype themselves. 
+In other words, homologous and convergent traits are inherently orthogonal in the natural world. 
+This orthogonality is an inherent property of biological visual variation shaped in the evolution. 
+The CNN simply discovers this pre-existing orthogonality after being trained on sufficient data without being given biological concepts. 
+
+\subsection{Shape vs Texture}\label{subsec:shape-vs-texture}
 
 Recent critiques in computer vision suggest that CNNs are biased towards
 textural features rather than the whole shapes \parencite{Geirhos2018ImagenetTrained}.
-However, the aforementioned discussion on the geometry of our model's morphospace implies
+However, the aforementioned discussion on the biological semantic of the embedding space implies
 that our model mainly focuses on the body plan rather than textures,
 challenge this assumption in the context of fine-grained visual classification.
 

@@ -115,10 +115,47 @@ and Procellariidae show the lowest (\cref{subfig:models_family}).
 \subsection{Phylogenetic signal}\label{subsec:r-phylogenetic-signal}
 
 The visual morphospace exhibit a highly significant phylogenetic signal ($p = 0.001$, 999 permutations). 
-It yields an overall $K_{mult}$ of 0.42. The value $K_{mult} < 1$ indicates that while phylogenetic constraints shape the visual morphospace, 
-the lineage divergence is coupled with substantial trait lability and convergent evolution (homoplasy). 
-The first phylogenetically aligned component (PAC1) alone exhibited extreme phylogenetic conservatism ($K = 2.08, p = 0.001$), 
-demonstrating that the primary axis of visual variation is strongly constrained by shared ancestry. 
+It yields an overall $K_{mult}$ of 0.4150. 
+The first phylogenetically aligned component (PAC1) alone exhibited extreme univariate Blomberg's K ($K_{uni} = 2.0775, p = 0.001$).
+The first 23 PACs show a $K_{mult}$ of 1.0129, and the value crosses the threshold of 1.0 at PAC24.
+In the permutation test, the maximum permuted $K_{mult}$ is 0.3627, and the maximum permuted $K_{uni}$ of PAC1 is 1.3290.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{trait_correlation_heatmap}
+    \caption{Alignment between the CNN's embedding space with biological traits, represented by the proportion of explained variance. The horizontal axis represents the components of PACA (Phylogenetically Aligned Component Analysis), sorted by phylogenetic signal strength. The vertical axis represents bird traits in AVONET \parencite{tobias2022avonet}. Numerical traits are quantified by Pearson's $R^2$, and categorical traits are quantified by the $\eta^2$ based on Kruskal-Wallis H-statistics. Blank cells indicate statistical insignificance of the correlation ($p > 0.05$). Trait abbreviations are defined as same as \textcite{tobias2022avonet}.}
+    \label{fig:paca-avonet}
+\end{figure}
+
+\begin{table}[htbp]
+  \centering
+  \caption{The PACA axis explained maximum variance of each AVONET trait. Trait abbreviations are defined as same as \textcite{tobias2022avonet}. }
+  \label{tab:paca-avonet}
+  \begin{tabular}{lll}
+    \toprule         
+    Trait & Max explained variances  &  PACA axes \\ 
+    \midrule                   
+    Beak.Length\_Culmen & 0.186940 &            1 \\ 
+    Beak.Length\_Nares  & 0.131211 &            1 \\ 
+    Beak.Width          & 0.114404 &            9 \\ 
+    Beak.Depth          & 0.139089 &            9 \\ 
+    Tarsus.Length       & 0.235985 &            1 \\ 
+    Wing.Length         & 0.322378 &            1 \\ 
+    Kipps.Distance      & 0.309666 &            1 \\ 
+    Secondary1          & 0.231521 &            1 \\ 
+    Hand-Wing.Index     & 0.197398 &            2 \\ 
+    Tail.Length         & 0.131632 &            1 \\ 
+    Mass                & 0.058428 &            1 \\ 
+    Habitat             & 0.251840 &            1 \\ 
+    Migration           & 0.109775 &            2 \\ 
+    Trophic.Level       & 0.061948 &           10 \\ 
+    Trophic.Niche       & 0.265584 &            1 \\ 
+    Primary.Lifestyle   & 0.323673 &            1 \\ 
+    \bottomrule                 
+  \end{tabular}
+\end{table}
+
+As shown in \cref{fig:paca-avonet,tab:paca-avonet}, early (approximately first 10) PACA axes (highest phylogenetic signal) show the strongest explained variance (darkest red/orange) with most traits. Correlations decrease quickly as PACA dimension index increases, while do not go to zero entirely. The vast majority of traits peak at PACA dimension 1, which is the single axis of maximum phylogenetic signal. Mass, Trophic.Level, and Migration show low max explained variance.
 
 \subsection{Disparity through time}\label{subsec:r-disparity-through-time}
 
