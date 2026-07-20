@@ -39,7 +39,7 @@
   {\multicitedelim}
   {\usebibmacro{postnote}}
 
-\title{Deep-learning-based pan-phenomic data reveals the explosive evolution of avian visual disparity}
+\title{Quantifying Avian Morphological Evolution through Deep Representation Learning} 
 
 \author[1,2]{Jiao Sun\orcidlink{0000-0002-5028-8132}}
 \affil[1]{Division of Ecology and Evolutionary Biology, School of Biological Science, University of Reading, Whiteknights, Reading, RG6 6EX, United Kingdom}
@@ -57,11 +57,7 @@
 % \linenumbers
 
 \begin{abstract}
-The evolution of biological morphology is critical for understanding global biodiversity. However, traditional geometric morphometrics analyses are constrained by the requirement of landmarks. 
-We propose a novel deep-learning-based framework that captures morphological representations from photos. The hyperspherical embedding with $L_2$ normalisation restricts the learned morphospace to a curved Riemannian manifold (a unit hypersphere). The Felsenstein's Phylogenetic Independent Contrasts (PIC) method are generalised from a Euclidean space to a unit hypersphere. a ResNet34 framework on over 10,000 bird species (4.8 million images)
-Multi-dimensional trait vectors were extracted from the model's final fully connected layer to compute hyperspherical disparity, agglomerative links, and ancestral state reconstructions.
-The validation pipeline successfully encoded morphological traits without a priori taxonomic or morphological knowledge. Spherical variance analysis proved that species richness acts as the primary driver of morphospace expansion. Furthermore, our generalised Riemannian PIC successfully recovered a visual "early burst" of intense disparity expansion immediately following the K-Pg mass extinction.
-The conclusions derived from the validation study are highly congruent with other macroevolutionary studies, demonstrating that our framework provides a novel high-throughput tool. 
+The evolution of biological morphology is fundamentally linked to ecological adaptation and species survival, yet traditional morphological evolution relies on landmark-based geometric morphometrics, a process constrained by subjective manual annotation, strict requirements for anatomical homology, and an inability to easily quantify complex, non-rigid traits such as plumage and texture. To overcome these limitations, we propose a scalable, landmark-free morphometric framework driven by deep learning. By extracting high-dimensional feature vectors from a Convolutional Neural Network (ResNet34) trained on images of over 10,000 bird species, we project raw visual semantics into a high-dimensional morphospace. Even without a priori taxonomic knowledge, this visual morphospace naturally recovers classical hierarchical taxonomy and effectively captures both homology and convergence. Analyses reveal a highly significant phylogenetic signal within the network's embeddings, with principal components correlating strongly with established ecological and morphological traits. Furthermore, by implementing a novel spherical Ancestral State Reconstruction algorithm, we uncover a pronounced "early-burst" pattern of disparity following the K-Pg mass extinction, supporting the niche-filling hypothesis of adaptive radiation.
 \end{abstract}
 
 \addcontentsline{toc}{section}{Abstract}
@@ -144,7 +140,7 @@ the modern morphological disparity.
 
 This approach serves as a powerful, scalable new method for macroevolution.
 By synthesising computer vision with evolutionary biology,
-this "pan-phenomic" framework offers a novel perspective on the drivers of biodiversity,
+this framework offers a novel perspective on the drivers of biodiversity,
 enabling the analysis of morphological evolution at a scale previously unattainable.
 
 \paragraph{Code and data accessibility}
