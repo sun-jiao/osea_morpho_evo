@@ -6,9 +6,11 @@ import torch.nn.functional as F
 import torchvision.transforms as T
 from PIL import Image
 from torchvision.models import resnet34
-from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam import GradCAM  #pip install grad-cam
 from pytorch_grad_cam.utils.image import show_cam_on_image
+# import scienceplots
 
+# plt.style.use(['science','nature'])
 # -----------------------------
 # Config
 # -----------------------------
@@ -105,6 +107,7 @@ def overlay_cam_on_image(img_np, cam):
 # -----------------------------
 # Main
 # -----------------------------
+
 if __name__ == '__main__':
     # 1. Load model
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -116,29 +119,37 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(weights_path))
     model = model.to(device)
     model.eval()
+    
     target_layer = model.layer4[-1]
     target_layer.register_forward_hook(forward_hook)
     target_layer.register_backward_hook(backward_hook)
+    
+    image_paths = [
+        '../test_images/A9_01683.jpg',
+        '../test_images/A9_08275.jpg',
+        '../test_images/A9_09326.jpg',
+        '../test_images/A9_09426.jpg'
+    ]
 
-    # 2. Load image
-    img_path = '/home/sunjiao/Pictures/✔A9/20221216-鄱阳湖/A9_05954.jpg'
-    input_tensor, img_np = load_image(img_path)
+    fig, axes = plt.subplots(2, 4, figsize=(16, 8)) 
 
-    # 3. Grad-CAM
-    cam = generate_contrastive_cam(model, input_tensor, mode='all')
-    overlay = overlay_cam_on_image(img_np, cam)
+    for idx, img_path in enumerate(image_paths):
+        input_tensor, img_np = load_image(img_path)
+        cam = generate_contrastive_cam(model, input_tensor, mode='all')
+        overlay = overlay_cam_on_image(img_np, cam)
 
-    # 4. Show result
-    plt.figure(figsize=(10,5))
-    plt.subplot(1,2,1)
-    plt.title("Original Image")
-    plt.imshow(img_np)
-    plt.axis('off')
+        row = idx // 2
+        col_orig = (idx % 2) * 2
+        col_cam = col_orig + 1
 
-    plt.subplot(1,2,2)
-    plt.title(f"Grad-CAM")
-    plt.imshow(overlay[..., ::-1])  # Convert BGR to RGB
-    plt.axis('off')
+        axes[row, col_orig].imshow(img_np)
+        axes[row, col_orig].set_title(f"Image {idx+1}: Original", fontsize=10)
+        axes[row, col_orig].axis('off')
+
+        axes[row, col_cam].imshow(overlay[..., ::-1])  # BGR -> RGB
+        axes[row, col_cam].set_title(f"Image {idx+1}: Grad-CAM", fontsize=10)
+        axes[row, col_cam].axis('off')
 
     plt.tight_layout()
-    plt.show()
+    plt.savefig('../document/gradcam_2x2.pdf', dpi=300)
+    # plt.show()

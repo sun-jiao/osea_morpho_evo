@@ -169,7 +169,7 @@ result_enum = pd.DataFrame({
 
 print(result)
 print(result_enum)
-exit()
+# exit()
 
 fig, (ax1, ax2) = plt.subplots(nrows=2, ncols=1, figsize=(8 + num_dims * 0.05, 6 + len(all_traits) * 0.25), sharex=True,
     gridspec_kw={"height_ratios": [len(NUMERIC_TRAIT_LABELS), len(CATEGORICAL_TRAIT_LABELS)]},

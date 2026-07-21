@@ -7,7 +7,7 @@ from scipy.optimize import curve_fit
 
 data = []
 
-LEVEL = 'order'
+LEVEL = 'family'
 INPUT_FILE = f"disparity_{LEVEL}.csv"
 
 # content of data:
@@ -206,4 +206,4 @@ plt.grid(True, which="both", linestyle='--', alpha=0.3)
 
 plt.tight_layout()
 plt.savefig(f"../document/model_comparison_{LEVEL}.pdf", dpi=300)
-plt.show()
+# plt.show()

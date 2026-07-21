@@ -3,9 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import interp1d
 
-data_dir = 'output_pca_top_5_null'
+# output_full_null, output_one_fifth_null, output_paca_exclude_top_20_null, output_paca_null, output_paca_top_5_null, output_paca_top_20_null
+data_dir = 'output_paca_null'
 data_type = 'interval' # 'num_slice'
-output_image_name = '../document/dtt_null_test_combined-pca_top_5.pdf'
+output_image_name = '../document/dtt_null_test_combined.pdf'
 
 empirical_data = []
 null_data = []
@@ -157,4 +158,4 @@ plt.ylim(0, 1.01)
 plt.tight_layout()
 plt.savefig(output_image_name, dpi=300)
 print(f"Done! Plot saved to {output_image_name}")
-plt.show()
+# plt.show()
