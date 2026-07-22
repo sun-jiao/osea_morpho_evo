@@ -46,10 +46,9 @@ The training procedure was conducted for 32 epochs.
 We reassigned the orders and families of all species (categories) to align with the
 IOC 15.1 \parencite{Gill2025IOC}. The weights are extracted from the final fully
 connected layer (fc) of the ResNet34 model. Weights of each species were regarded as a
-512-dimensional vector representing the morphological traits. They are reduced to the
-lowest boundary that can explain 80\% of all variances for subsequent analyses.
+512-dimensional vector representing the morphological traits.
 Gradient-weighted Class Activation Mapping (Grad-CAM,~\cite{Selvaraju2020Grad}) is
-employed to visualise the model's attention on images.
+employed to visualise the model's attention on images. 
 
 % The extracted vector is subsequently $L_2$-normalised. Every organism is mathematically represented as a unit vector $v$. 
 % This normalisation forces the deep visual morphospace to function geometrically as a unit hypersphere $\mathbb{S}^{D-1}$, 
