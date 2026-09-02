@@ -8,6 +8,8 @@ from scipy.stats import pearsonr, kruskal
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from excluded_species import is_excluded_species, load_excluded_species, normalise_species_name
+
 MODEL_PATH = 'model20240824.pth'
 BIRD_INFO_PATH = "bird_info.csv"
 AVONET_TRAITS_PATH = "ELEData/TraitData/AVONET3_BirdTree.xlsx"
@@ -27,7 +29,16 @@ bird_info = pd.read_csv(BIRD_INFO_PATH, header=None).values
 num_species = len(bird_info)
 print(f"Number of species: {num_species}")
 
-species_names = [row[0] + " (" + row[2] + ")" for row in bird_info]
+excluded_indices, excluded_names = load_excluded_species()
+included_indices = np.array([
+    i for i, row in enumerate(bird_info)
+    if not is_excluded_species(excluded_indices, excluded_names, index=i, name=row[2])
+])
+species_names = [
+    bird_info[i][0] + " (" + bird_info[i][2] + ")"
+    for i in included_indices
+]
+print(f"Excluded {num_species - len(included_indices)} species from PACA trait analyses.")
 
 model = resnet34(num_classes=11000)
 model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
@@ -58,12 +69,20 @@ final_weights = np.asanyarray(final_weights)
 w_combined = np.dot(w_pca, w_paca)
 
 name_match = pd.read_csv("avian_timetree_name_match.csv", header=None)
-name_match = name_match.sort_values(by=name_match.columns[0])
 
 paca_x = pd.read_feather("PACA_x.feather")
 
 paca_x.set_index("Species", inplace=True)
-paca_x = paca_x.sort_index()
+paca_x.index = paca_x.index.map(normalise_species_name)
+
+name_match["species_key"] = name_match.iloc[:, 0].map(normalise_species_name)
+name_match = name_match[
+    ~name_match.iloc[:, 2].isin(excluded_indices)
+    & ~name_match["species_key"].isin(excluded_names)
+]
+name_match = name_match[name_match["species_key"].isin(paca_x.index)]
+name_match = name_match.sort_values("species_key")
+paca_x = paca_x.loc[name_match["species_key"]]
 
 avonet_data = pd.read_excel(AVONET_TRAITS_PATH, sheet_name="AVONET3_BirdTree", index_col=0, header=0)
 avonet_name_match = pd.read_csv("birdtree_name_match.csv", header=None)
@@ -73,6 +92,7 @@ avonet_name_mapping = dict(zip(avonet_name_match[1], avonet_name_match[2]))
 avonet_data['B_index'] = avonet_data.index.map(avonet_name_mapping)
 avonet_data = avonet_data[avonet_data['B_index'] >= 0]
 avonet_data['B_index'] = avonet_data['B_index'].astype(int)
+avonet_data = avonet_data[~avonet_data['B_index'].isin(excluded_indices)]
 new_indexes = [bird_info[b][2] for b in avonet_data['B_index']]
 
 avonet_data.index = new_indexes
@@ -92,10 +112,10 @@ heatmap_data_enum = pd.DataFrame(index=CATEGORICAL_TRAIT_LABELS, columns=pac_lab
 for i in range(num_dims):
     # print(f"\n=== PACA {i+1} ===")
     # The first PACA axes (PAC1) in the original embedding space
-    scores_all = final_weights[:, i]
+    scores_all = final_weights[included_indices, i]
 
     indices = name_match.iloc[:, 2].to_numpy(dtype=int)
-    score_sorted = np.asarray(scores_all)[indices]
+    score_sorted = final_weights[indices, i]
     x_value = np.asarray(paca_x)[:, i]
 
     rho, p_value = pearsonr(x_value, score_sorted)

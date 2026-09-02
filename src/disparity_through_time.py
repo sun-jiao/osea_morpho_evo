@@ -12,6 +12,8 @@ import pandas as pd
 from Bio import Phylo
 from Bio.Phylo.BaseTree import Tree
 
+from excluded_species import is_excluded_species, load_excluded_species
+
 
 # ---------------------------
 # Data reading and processing
@@ -147,6 +149,18 @@ def create_trait_mapping(name_match_df, weights_df):
             else:
                 print(f"Warning: Index {index} is out of the range of vectors for label {label}.")
     return trait_map
+
+
+def remove_excluded_species(trait_mapping):
+    """Remove excluded taxa from either CSV- or Feather-derived trait maps."""
+    excluded_indices, excluded_names = load_excluded_species()
+    filtered_mapping = {
+        label: vector
+        for label, vector in trait_mapping.items()
+        if not is_excluded_species(excluded_indices, excluded_names, name=label)
+    }
+    print(f"Excluded {len(trait_mapping) - len(filtered_mapping)} species from DTT analysis.")
+    return filtered_mapping
 
 
 # ---------------------------
@@ -537,6 +551,8 @@ def main(tree_file, name_match_file, weights_file, load_file=None, null_test=Fal
     else:
         raise ValueError("Mode must be either 'csv' or 'feather'.")
 
+    trait_mapping = remove_excluded_species(trait_mapping)
+
     if trait_slice is not None:
         if isinstance(trait_slice, slice):
             trait_mapping = {
@@ -651,4 +667,4 @@ if __name__ == "__main__":
     # for p in processes:
     #     p.join()
     main("CombinedTrees/Avian-TimeTree.tre", "avian_timetree_name_match_trimmed.csv", "avian_timetree_one_fifth_species_pca_weights.csv", null_test=True, run_name="pca_top_5", trait_slice=slice(0, 5)) 
-    # main("CombinedTrees/Avian-TimeTree.tre", "PACA_x.feather", "PACA_x.feather", null_test=True, run_name="paca_exclude_top_20", mode="feather", trait_slice=slice(20, None)) 
+    # main("CombinedTrees/Avian-TimeTree.tre", "PACA_x.feather", "PACA_x.feather", null_test=True, run_name="paca_exclude_top_20", mode="feather", trait_slice=slice(20, None))

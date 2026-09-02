@@ -5,6 +5,7 @@ from sklearn.decomposition import PCA
 from sklearn.preprocessing import normalize # 引入归一化工具
 from torchvision.models import resnet34
 from disparity_through_time import read_csv, create_trait_mapping
+from excluded_species import is_excluded_species, load_excluded_species
 
 TARGET_VARIANCE = 0.80
 MODEL_PATH = 'model20240824.pth'
@@ -46,8 +47,16 @@ weights_norm = normalize(raw_weights, norm='l2', axis=1)
 
 trait_mapping = create_trait_mapping(name_match, weights_norm)
 
-mapped_weights = np.array(list(trait_mapping.values()))
-mapped_labels = list(trait_mapping.keys())
+excluded_indices, excluded_names = load_excluded_species()
+analysis_trait_mapping = {
+    label: vector
+    for label, vector in trait_mapping.items()
+    if not is_excluded_species(excluded_indices, excluded_names, name=label)
+}
+print(f"Excluded {len(trait_mapping) - len(analysis_trait_mapping)} species from DTT/PCA analyses.")
+
+mapped_weights = np.array(list(analysis_trait_mapping.values()))
+mapped_labels = list(analysis_trait_mapping.keys())
 
 with open(new_name_match_file, mode='w', newline='', encoding='utf-8') as f:
     writer = csv.writer(f)
@@ -123,8 +132,14 @@ with open(PCA_OUTPUT_PATH_100, 'w', newline='') as file:
     writer = csv.writer(file)
     writer.writerows(weights_pca_100_final)
 
-projection_matrix = pca_final_100.components_.T  
-data_mean = pca_final_100.mean_
+# Similarity clustering intentionally retains all species.  Preserve its PCA
+# basis as a separate fit to the complete mapped dataset, while the DTT files
+# above are based only on analysis_trait_mapping.
+clustering_weights = np.array(list(trait_mapping.values()))
+clustering_pca = PCA(n_components=min(clustering_weights.shape))
+clustering_pca.fit(clustering_weights)
+projection_matrix = clustering_pca.components_.T
+data_mean = clustering_pca.mean_
 
 np.save('pca_final_100_projection_matrix.npy', projection_matrix)
 np.save('pca_final_100_data_mean.npy', data_mean)

@@ -6,6 +6,8 @@ import pandas as pd
 import torch
 import torch.nn.functional as F
 
+from excluded_species import is_excluded_species, load_excluded_species
+
 LEVEL = "order"
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -25,13 +27,16 @@ with open("bird_info.csv", 'r') as f:
         bird_info.append(row)
 
 num_species = len(bird_info)
+excluded_indices, excluded_names = load_excluded_species()
 
-excluded = []
-with open("excluded_species.csv", 'r') as f:
-    reader = csv.reader(f)
-    for row in reader:
-        excluded.append(row)
-excluded = [bird[0] for bird in excluded]
+included_indices = [
+    i for i, bird in enumerate(bird_info)
+    if i < len(weights) and not is_excluded_species(
+        excluded_indices, excluded_names, index=i, name=bird[2]
+    )
+]
+included_index_set = set(included_indices)
+print(f"Analysing {len(included_indices)} of {min(num_species, len(weights))} species after exclusions.")
 
 
 def calculate_disparity(_vectors):
@@ -71,7 +76,7 @@ def calculate_disparity(_vectors):
 
 
 if LEVEL == "class":
-    result = calculate_disparity(weights)
+    result = calculate_disparity(weights[included_indices])
 
     print(f'Sphere variance: {result[0]}, Mean angle: {result[1]}, Variance angle: {result[2]}, Cosine Similarity with root: {result[3]}')
     exit()
@@ -88,7 +93,7 @@ groups_and_vectors = []
 for group in unique_groups:
     indices = [
         i for i, g in enumerate(groups_info)
-        if g == group and i not in excluded and i < len(weights)
+        if g == group and i in included_index_set
     ]
 
     if len(indices) > 0:
