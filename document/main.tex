@@ -1,16 +1,15 @@
-\documentclass[11pt]{article}
+\documentclass[pdflatex]{sn-jnl}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{amsmath}
 \usepackage[backend=biber,style=apa,sorting=nyt]{biblatex}
-\usepackage[colorlinks=true, allcolors=blue]{hyperref}
 \usepackage{cleveref}
 \usepackage{csquotes}
 \usepackage{lineno}
 \usepackage{amsopn}
+% sn-jnl already defines \orcidlogo, so clear it before orcidlink redefines it.
+\let\orcidlogo\relax
 \usepackage{orcidlink}
-\usepackage{authblk}
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{geometry}
 \usepackage{graphicx}
 \usepackage{caption}
 \usepackage{subcaption}
@@ -21,8 +20,9 @@
 \usepackage{setspace}
 \usepackage{tikz}
 \usetikzlibrary{calc, angles, quotes, intersections, arrows.meta, decorations.markings, decorations.pathreplacing}
-\geometry{left=3cm, right=3cm, top=3cm, bottom=3cm}
 \MakeOuterQuote{"}
+% Keep PDF bookmarks at section/subsection level to match the document structure.
+\hypersetup{bookmarksdepth=2}
 \addbibresource{references.bib}
 \DeclareNameAlias{sortname}{family-given}
 \DeclareNameAlias{default}{family-given}
@@ -45,25 +45,21 @@
 \affil[1]{Division of Ecology and Evolutionary Biology, School of Biological Science, University of Reading, Whiteknights, Reading, RG6 6EX, United Kingdom}
 \affil[2]{CAS Key Laboratory of Plant Germplasm Enhancement and Specialty Agriculture, Wuhan Botanical Garden, Chinese Academy of Sciences, Wuhan 430074, China}
 \affil[ ]{\url{j.sun@pgr.reading.ac.uk}}
-\affil[ ]{\url{sunjiao19@mails.ucas.ac.cn}}
 
 \date{\today}
 
 \begin{document}
+
+% sn-jnl expects the abstract and keywords before \maketitle.
+\abstract{The evolution of biological morphology is fundamentally linked to ecological adaptation and species survival, yet traditional morphological evolution relies on landmark-based geometric morphometrics, a process constrained by subjective manual annotation, strict requirements for anatomical homology, and an inability to easily quantify complex, non-rigid traits such as plumage and texture. To overcome these limitations, we propose a scalable, landmark-free morphometric framework driven by deep learning. By extracting high-dimensional feature vectors from a Convolutional Neural Network (ResNet34) trained on images of over 10,000 bird species, we project raw visual semantics into a high-dimensional morphospace. Even without a priori taxonomic knowledge, this visual morphospace naturally recovers classical hierarchical taxonomy and effectively captures both homology and convergence. Analyses reveal a highly significant phylogenetic signal within the network's embeddings, with principal components correlating strongly with established ecological and morphological traits. Furthermore, by implementing a novel spherical Ancestral State Reconstruction algorithm, we uncover a pronounced "early-burst" pattern of disparity following the K-Pg mass extinction, supporting the niche-filling hypothesis of adaptive radiation.}
+
+\keywords{biodiversity, deep learning, morphological evolution, representation learning}
 
 \maketitle
 
 % \doublespacing
 
 % \linenumbers
-
-\begin{abstract}
-The evolution of biological morphology is fundamentally linked to ecological adaptation and species survival, yet traditional morphological evolution relies on landmark-based geometric morphometrics, a process constrained by subjective manual annotation, strict requirements for anatomical homology, and an inability to easily quantify complex, non-rigid traits such as plumage and texture. To overcome these limitations, we propose a scalable, landmark-free morphometric framework driven by deep learning. By extracting high-dimensional feature vectors from a Convolutional Neural Network (ResNet34) trained on images of over 10,000 bird species, we project raw visual semantics into a high-dimensional morphospace. Even without a priori taxonomic knowledge, this visual morphospace naturally recovers classical hierarchical taxonomy and effectively captures both homology and convergence. Analyses reveal a highly significant phylogenetic signal within the network's embeddings, with principal components correlating strongly with established ecological and morphological traits. Furthermore, by implementing a novel spherical Ancestral State Reconstruction algorithm, we uncover a pronounced "early-burst" pattern of disparity following the K-Pg mass extinction, supporting the niche-filling hypothesis of adaptive radiation.
-\end{abstract}
-
-\addcontentsline{toc}{section}{Abstract}
-
-\paragraph{Keywords} biodiversity, deep learning, morphological evolution, representation learning
 
 \section{Introduction}\label{sec:introduction}
 
